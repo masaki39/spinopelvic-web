@@ -107,7 +107,7 @@ function navTo(i){
 
 async function recordAndNext(){
   recompute();
-  if(!state.result){ setStatus('必須点（大腿骨頭L/R・S1・L1）が未配置です'); return; }
+  if(!state.result?.complete){ setStatus('必須点（大腿骨頭L/R・S1・L1）が未配置です'); return; }
   state.caseId=$('caseId').value.trim();
   const row=state.preset.csvRow(state, state.result);
   const pos=state.rowByIndex[state.index];
@@ -265,7 +265,7 @@ window.addEventListener('keydown', e=>{
 });
 
 function startC7(){
-  if(!state.result){ setStatus('先にPI/PT/SS/LL計測を完了してください'); return; }
+  if(!state.result?.complete){ setStatus('先にPI/PT/SS/LL計測を完了してください'); return; }
   state.placingC7=true;
   delete state.points.c7a; delete state.points.c7p;
   state.placedOrder=state.placedOrder.filter(id=>id!=='c7a'&&id!=='c7p');
@@ -296,9 +296,11 @@ function updateUI(){
   // 計測値
   const res=state.result, m=$('metrics');
   if(res){
-    m.innerHTML = state.preset.metrics.map(mt=>
-      `<div class="metric"><div class="k">${mt.key}</div><div class="v">${res[mt.key].toFixed(1)}${mt.unit}</div></div>`
-    ).join('');
+    m.innerHTML = state.preset.metrics.map(mt=>{
+      const v=res[mt.key];
+      const display = v!=null ? `${v.toFixed(1)}${mt.unit}` : '-';
+      return `<div class="metric"><div class="k">${mt.key}</div><div class="v">${display}</div></div>`;
+    }).join('');
     const sv=$('svaInfo');
     if(res.svaPx!=null){
       sv.innerHTML = res.svaMm!=null
@@ -403,6 +405,11 @@ window.runSelfTest=function(){
     s1a:{x:0,y:200},s1p:{x:100,y:200},l1a:{x:0,y:100},l1p:{x:100,y:100},
     c7a:{x:110,y:0},c7p:{x:130,y:0}}, 2);
   near(r.svaPx,-20,0.01,'SVA px'); near(r.svaMm,-10,0.01,'SVA mm');
+  // PT符号テスト: anterior=LEFT(antSign=-1)、FHがS1より後方(x大) → PT>0 (正常解剖)
+  r=compute({femL:{x:75,y:300},femR:{x:95,y:300},
+    s1a:{x:30,y:200},s1p:{x:90,y:215},l1a:{x:35,y:110},l1p:{x:85,y:100}});
+  if(r.PT<=0) throw new Error('FAIL PT sign: expected >0, got '+r.PT);
+  console.log('ok PT positive (FH posterior)',r.PT.toFixed(3));
   // 左右反転不変性: x座標を反転しても全計測値が一致する（符号付き化の要点）
   const cfg={femL:{x:20,y:300},femR:{x:80,y:300},
     s1a:{x:30,y:200},s1p:{x:90,y:215},l1a:{x:35,y:110},l1p:{x:85,y:100},

@@ -93,8 +93,24 @@ function paintOverlay(g, map, ds, lw){
   // S1/L1
   const sp=[['s1a','S1前','#ffeb3b'],['s1p','S1後','#ffeb3b'],['l1a','L1前','#ff9800'],['l1p','L1後','#ff9800']];
   for(const [id,t,col] of sp){ if(P[id]){ dot(P[id],6,col); label(P[id],t,col); } }
-  if(P.s1a&&P.s1p) line(P.s1a,P.s1p,'#00e5ff',2);
-  if(P.l1a&&P.l1p) line(P.l1a,P.l1p,'#ff9800',2);
+  if(P.s1a&&P.s1p){
+    line(P.s1a,P.s1p,'#00e5ff',2);
+    const s1Len=G.distance(P.s1a,P.s1p);
+    if(s1Len>0){
+      const ux=(P.s1p.x-P.s1a.x)/s1Len, uy=(P.s1p.y-P.s1a.y)/s1Len;
+      dashed(g,map,{x:P.s1a.x-ux*s1Len, y:P.s1a.y-uy*s1Len},P.s1a,'#00e5ff',1.5);
+      dashed(g,map,P.s1p,{x:P.s1p.x+ux*s1Len, y:P.s1p.y+uy*s1Len},'#00e5ff',1.5);
+    }
+  }
+  if(P.l1a&&P.l1p){
+    line(P.l1a,P.l1p,'#ff9800',2);
+    const l1Len=G.distance(P.l1a,P.l1p);
+    if(l1Len>0){
+      const ux=(P.l1p.x-P.l1a.x)/l1Len, uy=(P.l1p.y-P.l1a.y)/l1Len;
+      dashed(g,map,{x:P.l1a.x-ux*l1Len, y:P.l1a.y-uy*l1Len},P.l1a,'#ff9800',1.5);
+      dashed(g,map,P.l1p,{x:P.l1p.x+ux*l1Len, y:P.l1p.y+uy*l1Len},'#ff9800',1.5);
+    }
+  }
 
   // C7
   if(P.c7a){ dot(P.c7a,6,'#b2ff59'); label(P.c7a,'C7前','#b2ff59'); }
@@ -103,10 +119,17 @@ function paintOverlay(g, map, ds, lw){
 
   // 計測補助線
   if(res){
-    dot(res.hipAxis,5,'#ab47bc'); dot(res.s1Mid,5,'#fff');
-    line(res.hipAxis,res.s1Mid,'#ab47bc',2);
+    // s1Mid dot + S1 normal: s1a+s1p で解放
+    dot(res.s1Mid,5,'#fff');
     const end={x:res.s1Mid.x+res.s1Normal.x*180, y:res.s1Mid.y+res.s1Normal.y*180};
     line(res.s1Mid,end,'#fff',2);
+
+    // hipAxis + PT line: femL+femR 追加後に解放
+    if(res.hipAxis){
+      dot(res.hipAxis,5,'#ab47bc');
+      line(res.hipAxis,res.s1Mid,'#ab47bc',2);
+    }
+
     if(res.c7Mid&&P.s1p){
       line(res.c7Mid,{x:res.c7Mid.x,y:P.s1p.y},'#b2ff59',2.5);
       dashed(g,map,{x:P.s1p.x,y:P.s1p.y},{x:res.c7Mid.x,y:P.s1p.y},'#b2ff59',1.5);
