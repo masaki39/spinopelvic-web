@@ -288,6 +288,8 @@ function updateUI(){
   document.querySelectorAll('.dataonly').forEach(b=>b.disabled=!has);
   $('btnPrev').disabled=!has||state.index<=0;
   $('btnNext').disabled=!has||state.index>=state.images.length-1;
+  $('navPrev').disabled=!has||state.index<=0;
+  $('navNext').disabled=!has||state.index>=state.images.length-1;
   const rec = has && state.rowByIndex[state.index]!==undefined;
   $('counter').textContent = has
     ? `画像 ${state.index+1} / ${state.images.length}` + (rec?' ✓記録済':'') + (hasUnsaved()?' ●未記録':'')
@@ -363,10 +365,14 @@ $('btnNext').onclick=()=>navTo(state.index+1);
 $('btnCsv').onclick=saveCsv;
 $('btnHelp').onclick=toggleHelp;
 // モバイル: 計測値ボトムシートの開閉
-$('btnPanel').onclick=()=>{
+function togglePanel(){
   const open=document.body.classList.toggle('panel-open');
-  $('btnPanel').textContent = open ? '✕ 閉じる' : '📊 計測値';
-};
+  $('navPanel').textContent = open ? '✕ 閉じる' : '📊 計測値';
+}
+$('navPanel').onclick = togglePanel;
+$('navPrev').onclick   = ()=>navTo(state.index-1);
+$('navNext').onclick   = ()=>navTo(state.index+1);
+$('navRecord').onclick = recordAndNext;
 // モバイル: オンスクリーンのズーム/フィット（ホットキー +/-/0 の代替）
 $('btnZoomIn').onclick =()=>zoomAt(canvas.clientWidth/2, canvas.clientHeight/2, 1.25);
 $('btnZoomOut').onclick=()=>zoomAt(canvas.clientWidth/2, canvas.clientHeight/2, 1/1.25);

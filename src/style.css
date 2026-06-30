@@ -1,4 +1,4 @@
-:root { --bg:#1e1e1e; --panel:#f4f4f5; --accent:#1565c0; }
+:root { --bg:#1e1e1e; --panel:#f4f4f5; --accent:#1565c0; --nav-h:56px; }
 * { box-sizing: border-box; }
 html, body { margin:0; height:100%; font-family: system-ui, "Hiragino Sans", sans-serif; }
 body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
@@ -8,13 +8,14 @@ body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
                   background:#3a3a3a; color:#fff; cursor:pointer; }
 #toolbar button:hover { background:#505050; }
 #toolbar button:disabled { opacity:.4; cursor:default; }
-#toolbar .sep { width:1px; height:22px; background:#555; margin:0 3px; }
 #toolbar .accent { background:var(--accent); }
 #toolbar .teal { background:#00897b; }
 #toolbar .orange { background:#ef6c00; }
 #toolbar label { font-size:12px; display:flex; align-items:center; gap:4px; }
 #toolbar input[type=text] { font-size:12px; padding:4px 6px; border-radius:4px; border:1px solid #777;
                             background:#2a2a2a; color:#fff; width:120px; }
+.toolgroup { display:flex; align-items:center; gap:4px;
+             background:#2a2a2a; border-radius:6px; padding:3px 6px; }
 #counter { font-size:12px; color:#bbb; margin-left:auto; }
 #main { flex:1; display:flex; min-height:0; }
 #stage { flex:1; position:relative; background:#222; min-width:0; }
@@ -38,6 +39,7 @@ body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
 #help table { border-collapse:collapse; }
 #help td { padding:3px 14px 3px 0; vertical-align:top; }
 .scalebox { margin-top:10px; padding:8px; border-radius:6px; font-size:12px; }
+#bottomnav { display:none; }
 #footer { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px;
           padding:5px 10px; background:var(--bg); color:#bbb; font-size:11px;
           border-top:1px solid #333; }
@@ -60,13 +62,16 @@ body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
 /*==================================================================
   モバイル（狭幅）レイアウト
   - ホットキー表示(.hk)を隠す
+  - .nomobile（前/次/記録グループ）をツールバーから非表示
   - ツールバーは横スクロール1行（縦の作画領域を最大化）
-  - 計測サイドバーは下からの開閉式ボトムシート（📊で開閉）
+  - 計測サイドバーは下からの開閉式ボトムシート（ボトムナビで開閉）
+  - ボトムナビに前/記録/次/計測値を固定配置
 ==================================================================*/
 @media (max-width:780px){
   .hk { display:none; }
   .mobileonly { display:inline-block; }
   #zoomctl.mobileonly { display:flex; }
+  .nomobile { display:none; }
 
   #toolbar { flex-wrap:nowrap; overflow-x:auto; gap:4px; padding:5px 6px;
              -webkit-overflow-scrolling:touch; }
@@ -74,15 +79,37 @@ body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
   #toolbar button { padding:7px 9px; }
   #toolbar #counter { margin-left:4px; }
 
+  #bottomnav {
+    display: flex;
+    background: var(--bg);
+    border-top: 1px solid #333;
+    padding: 6px 8px max(6px, env(safe-area-inset-bottom));
+    gap: 6px;
+  }
+  #bottomnav button {
+    flex: 1;
+    padding: 10px 4px;
+    font-size: 13px;
+    border: 0;
+    border-radius: 8px;
+    background: #3a3a3a;
+    color: #fff;
+    cursor: pointer;
+    min-height: 44px;
+  }
+  #bottomnav button:disabled { opacity:.4; cursor:default; }
+  #bottomnav button:active { opacity:.7; }
+  #bottomnav .accent { background: var(--accent); }
+
   #sidebar {
-    position:fixed; left:0; right:0; bottom:0; width:auto;
+    position:fixed; left:0; right:0; bottom:var(--nav-h); width:auto;
     max-height:62vh; border-radius:12px 12px 0 0;
-    box-shadow:0 -3px 14px #0005; transform:translateY(105%);
+    box-shadow:0 -3px 14px #0005; transform:translateY(calc(100% + var(--nav-h)));
     transition:transform .25s ease; z-index:25;
   }
   body.panel-open #sidebar { transform:translateY(0); }
   #sidebar::before { content:""; display:block; width:42px; height:4px; border-radius:2px;
                      background:#c4c4c4; margin:0 auto 10px; }
 
-  #footer { font-size:10px; gap:4px 10px; padding:5px 8px; }
+  #footer { display:none; }
 }
