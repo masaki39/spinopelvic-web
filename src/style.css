@@ -38,3 +38,12 @@ body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
 #help table { border-collapse:collapse; }
 #help td { padding:3px 14px 3px 0; vertical-align:top; }
 .scalebox { margin-top:10px; padding:8px; border-radius:6px; font-size:12px; }
+#footer { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px;
+          padding:5px 10px; background:var(--bg); color:#bbb; font-size:11px;
+          border-top:1px solid #333; }
+#footer a { color:#7ab7ff; text-decoration:none; }
+#footer a:hover { text-decoration:underline; }
+#footer .research { color:#ffb74d; font-weight:600; }
+#footer .grow { margin-left:auto; }
+#footer #dlLocal { background:var(--accent); color:#fff; padding:3px 9px; border-radius:4px; }
+#footer #dlLocal:hover { background:#1976d2; text-decoration:none; }
