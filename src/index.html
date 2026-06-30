@@ -7,25 +7,26 @@
 </head>
 <body>
   <div id="toolbar">
-    <button id="btnOpen">画像を開く (O)</button>
-    <button class="dataonly" id="btnRotL">⟲ 左90 (⇧R)</button>
-    <button class="dataonly" id="btnRotR">⟳ 右90 (R)</button>
-    <button class="dataonly" id="btnFlip">左右反転 (F)</button>
+    <button id="btnOpen">画像を開く<span class="hk"> (O)</span></button>
+    <button class="dataonly" id="btnRotL">⟲ 左90<span class="hk"> (⇧R)</span></button>
+    <button class="dataonly" id="btnRotR">⟳ 右90<span class="hk"> (R)</span></button>
+    <button class="dataonly" id="btnFlip">左右反転<span class="hk"> (F)</span></button>
     <span class="sep"></span>
-    <button class="dataonly orange" id="btnScale">スケール校正 (S)</button>
-    <button class="dataonly teal" id="btnC7">C7入力 / SVA (C)</button>
-    <button class="dataonly" id="btnUndo">取消 (Z)</button>
+    <button class="dataonly orange" id="btnScale">スケール校正<span class="hk"> (S)</span></button>
+    <button class="dataonly teal" id="btnC7">C7入力 / SVA<span class="hk"> (C)</span></button>
+    <button class="dataonly" id="btnUndo">取消<span class="hk"> (Z)</span></button>
     <span class="sep"></span>
-    <button class="dataonly accent" id="btnRecord">記録して次へ (Enter)</button>
-    <button class="dataonly" id="btnPrev">前 (P)</button>
-    <button class="dataonly" id="btnNext">次 (N)</button>
+    <button class="dataonly accent" id="btnRecord">記録して次へ<span class="hk"> (Enter)</span></button>
+    <button class="dataonly" id="btnPrev">前<span class="hk"> (P)</span></button>
+    <button class="dataonly" id="btnNext">次<span class="hk"> (N)</span></button>
     <span class="sep"></span>
-    <button id="btnCsv">CSV保存 (D)</button>
+    <button id="btnCsv">CSV保存<span class="hk"> (D)</span></button>
     <label><input type="checkbox" id="chkPer"> 1枚ごとDL</label>
     <label><input type="checkbox" id="chkScale"> スケール維持</label>
     <span class="sep"></span>
     <label>ID <input type="text" id="caseId" placeholder="case001"></label>
     <button id="btnHelp">? ヘルプ</button>
+    <button id="btnPanel" class="mobileonly">📊 計測値</button>
     <span id="counter">画像なし</span>
   </div>
 
@@ -34,6 +35,11 @@
       <canvas id="canvas"></canvas>
       <div id="empty">画像を開く（複数選択・フォルダのドラッグ&ドロップ可）</div>
       <div id="help"></div>
+      <div id="zoomctl" class="mobileonly">
+        <button class="dataonly" id="btnZoomIn" aria-label="拡大">＋</button>
+        <button class="dataonly" id="btnZoomOut" aria-label="縮小">－</button>
+        <button class="dataonly" id="btnFit" aria-label="全体表示">⊡</button>
+      </div>
     </div>
     <div id="sidebar">
       <h3>計測値</h3>

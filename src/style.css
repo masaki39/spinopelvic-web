@@ -47,3 +47,42 @@ body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
 #footer .grow { margin-left:auto; }
 #footer #dlLocal { background:var(--accent); color:#fff; padding:3px 9px; border-radius:4px; }
 #footer #dlLocal:hover { background:#1976d2; text-decoration:none; }
+
+/* モバイル専用要素は既定で非表示。デスクトップとロジックは共通。 */
+.mobileonly { display:none; }
+
+/* オンスクリーンのズーム/フィット操作（ホットキー非対応のタッチ端末向け） */
+#zoomctl { flex-direction:column; gap:6px; position:fixed; left:8px; top:84px; z-index:20; }
+#zoomctl button { width:40px; height:40px; border:0; border-radius:8px;
+                  background:#000a; color:#fff; font-size:18px; line-height:1; cursor:pointer; }
+#zoomctl button:disabled { opacity:.35; }
+
+/*==================================================================
+  モバイル（狭幅）レイアウト
+  - ホットキー表示(.hk)を隠す
+  - ツールバーは横スクロール1行（縦の作画領域を最大化）
+  - 計測サイドバーは下からの開閉式ボトムシート（📊で開閉）
+==================================================================*/
+@media (max-width:780px){
+  .hk { display:none; }
+  .mobileonly { display:inline-block; }
+  #zoomctl.mobileonly { display:flex; }
+
+  #toolbar { flex-wrap:nowrap; overflow-x:auto; gap:4px; padding:5px 6px;
+             -webkit-overflow-scrolling:touch; }
+  #toolbar > * { flex:0 0 auto; }
+  #toolbar button { padding:7px 9px; }
+  #toolbar #counter { margin-left:4px; }
+
+  #sidebar {
+    position:fixed; left:0; right:0; bottom:0; width:auto;
+    max-height:62vh; border-radius:12px 12px 0 0;
+    box-shadow:0 -3px 14px #0005; transform:translateY(105%);
+    transition:transform .25s ease; z-index:25;
+  }
+  body.panel-open #sidebar { transform:translateY(0); }
+  #sidebar::before { content:""; display:block; width:42px; height:4px; border-radius:2px;
+                     background:#c4c4c4; margin:0 auto 10px; }
+
+  #footer { font-size:10px; gap:4px 10px; padding:5px 8px; }
+}

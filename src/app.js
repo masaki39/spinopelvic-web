@@ -360,6 +360,15 @@ $('btnPrev').onclick=()=>navTo(state.index-1);
 $('btnNext').onclick=()=>navTo(state.index+1);
 $('btnCsv').onclick=saveCsv;
 $('btnHelp').onclick=toggleHelp;
+// モバイル: 計測値ボトムシートの開閉
+$('btnPanel').onclick=()=>{
+  const open=document.body.classList.toggle('panel-open');
+  $('btnPanel').textContent = open ? '✕ 閉じる' : '📊 計測値';
+};
+// モバイル: オンスクリーンのズーム/フィット（ホットキー +/-/0 の代替）
+$('btnZoomIn').onclick =()=>zoomAt(canvas.clientWidth/2, canvas.clientHeight/2, 1.25);
+$('btnZoomOut').onclick=()=>zoomAt(canvas.clientWidth/2, canvas.clientHeight/2, 1/1.25);
+$('btnFit').onclick    =()=>{ fit(); render(); };
 $('chkPer').onchange=e=>state.out.perImage=e.target.checked;
 $('chkScale').onchange=e=>state.keepScale=e.target.checked;
 $('caseId').oninput=e=>state.caseId=e.target.value;
