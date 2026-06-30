@@ -4,7 +4,7 @@ Spinopelvic parameters (**PI / PT / SS / LL / SVA**) を計測するローカル
 単一の `index.html` だけで動作し、**ダウンロードしてダブルクリックで起動**できます。
 画像は端末外に送信されず、すべてブラウザ内で処理されます（Research use only）。
 
-**🔗 オンライン版: https://masaki39.github.io/spinopelvic-web/**
+**🔗 オンライン版: https://masaki39.net/spinopelvic-web/**
 （ブラウザ上で開いても画像はアップロードされず、端末内でのみ処理されます）
 
 ## 使い方
