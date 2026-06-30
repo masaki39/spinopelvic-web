@@ -389,11 +389,18 @@ window.runSelfTest=function(){
   r=compute({femL:{x:0,y:200},femR:{x:100,y:200},
     s1a:{x:0,y:0},s1p:{x:100,y:100},l1a:{x:0,y:0},l1p:{x:100,y:0}});
   near(r.SS,45,0.01,'SS 45deg'); near(r.LL,45,0.01,'LL 45 vs 0');
-  // SVA: C7中点 x=120, S1後縁 x=100 → 20px
+  // SVA: 前方は画面左(x=0側)。C7中点 x=120 は S1後縁 x=100 より後方 → -20px
   r=compute({femL:{x:0,y:300},femR:{x:100,y:300},
     s1a:{x:0,y:200},s1p:{x:100,y:200},l1a:{x:0,y:100},l1p:{x:100,y:100},
     c7a:{x:110,y:0},c7p:{x:130,y:0}}, 2);
-  near(r.svaPx,20,0.01,'SVA px'); near(r.svaMm,10,0.01,'SVA mm');
+  near(r.svaPx,-20,0.01,'SVA px'); near(r.svaMm,-10,0.01,'SVA mm');
+  // 左右反転不変性: x座標を反転しても全計測値が一致する（符号付き化の要点）
+  const cfg={femL:{x:20,y:300},femR:{x:80,y:300},
+    s1a:{x:30,y:200},s1p:{x:90,y:215},l1a:{x:35,y:110},l1p:{x:85,y:100},
+    c7a:{x:60,y:10},c7p:{x:75,y:14}};
+  const mir=o=>Object.fromEntries(Object.entries(o).map(([k,v])=>[k,{x:-v.x,y:v.y}]));
+  const a=compute(cfg,2), b=compute(mir(cfg),2);
+  for(const k of ['PI','PT','SS','LL','svaPx','svaMm']) near(a[k],b[k],1e-6,'mirror '+k);
   console.log('%c runSelfTest: ALL PASSED','color:green;font-weight:bold');
   return true;
 };

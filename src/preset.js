@@ -21,24 +21,37 @@ export const SPINOPELVIC = {
     {key:'PI', unit:'°'}, {key:'PT', unit:'°'},
     {key:'SS', unit:'°'}, {key:'LL', unit:'°'},
   ],
+  // 計測値は符号付き。前後ランドマーク(s1a/s1p, l1a/l1p)から「前方向」を導出するため、
+  // 画像の左右反転に依存せず一貫した正負が得られる（絶対値による符号の喪失を解消）。
   compute(P, pxPerMm){
     if(!(P.femL&&P.femR&&P.s1a&&P.s1p&&P.l1a&&P.l1p)) return null;
+    const RAD=180/Math.PI;
     const hipAxis=G.midpoint(P.femL,P.femR);
     const s1Mid=G.midpoint(P.s1a,P.s1p);
+
+    // 前方が画面右なら +1、左なら -1。終板の前縁→後縁の水平変位から決定する。
+    const antSign = Math.sign((P.s1a.x-P.s1p.x)+(P.l1a.x-P.l1p.x)) || 1;
+
+    // 終板の水平からの符号付き傾き（前縁が頭側＝正）。dxは常に前方向（正）にとる。
+    const incl=(a,p)=>Math.atan2(p.y-a.y, antSign*(a.x-p.x))*RAD;
+    const SS=incl(P.s1a,P.s1p);                  // Sacral Slope
+    const LL=SS-incl(P.l1a,P.l1p);               // Lumbar Lordosis（前弯=正, 後弯=負）
+
+    // Pelvic Tilt: S1中点→寛骨臼軸線 と鉛直線の符号付き角度（寛骨臼軸が前方＝正）。
+    const PT=Math.atan2(antSign*(hipAxis.x-s1Mid.x), hipAxis.y-s1Mid.y)*RAD;
+    const PI=PT+SS;                              // Pelvic Incidence（幾何恒等式 PI=PT+SS）
+
+    // 描画用 S1 終板法線（頭側向き）
     const s1Vec={x:P.s1p.x-P.s1a.x, y:P.s1p.y-P.s1a.y};
     let n={x:-s1Vec.y, y:s1Vec.x};
     const nn=Math.hypot(n.x,n.y);
     if(nn>0) n={x:n.x/nn, y:n.y/nn};
     if(n.y<0) n={x:-n.x, y:-n.y};
-    const pelvis={x:hipAxis.x-s1Mid.x, y:hipAxis.y-s1Mid.y};
-    const PI=G.acuteAngle(pelvis, n);
-    const PT=G.acuteAngle(pelvis, {x:0,y:-1});
-    const SS=G.acuteAngle(s1Vec, {x:1,y:0});
-    const LL=G.cobbAngle(P.l1a,P.l1p,P.s1a,P.s1p);
+
     let svaPx=null, svaMm=null, c7Mid=null;
     if(P.c7a&&P.c7p){
       c7Mid=G.midpoint(P.c7a,P.c7p);
-      svaPx=c7Mid.x-P.s1p.x;
+      svaPx=antSign*(c7Mid.x-P.s1p.x);           // C7 が S1 後縁より前方＝正（前方バランス）
       if(pxPerMm&&pxPerMm>0) svaMm=svaPx/pxPerMm;
     }
     return {PI,PT,SS,LL,svaPx,svaMm,hipAxis,s1Mid,s1Normal:n,c7Mid};
