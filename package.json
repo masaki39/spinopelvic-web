@@ -1,0 +1,17 @@
+{
+  "name": "spinopelvic-web",
+  "version": "1.0.0",
+  "description": "Spinopelvic parameters (PI/PT/SS/LL/SVA) measurement local web app",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@11.6.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && cp dist/index.html index.html",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0",
+    "vite-plugin-singlefile": "^2.1.0"
+  }
+}

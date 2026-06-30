@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spinopelvic Analyzer (Web)</title>
+</head>
+<body>
+  <div id="toolbar">
+    <button id="btnOpen">画像を開く<span class="hk"> (O)</span></button>
+    <button class="dataonly" id="btnRotL">⟲ 左90<span class="hk"> (⇧R)</span></button>
+    <button class="dataonly" id="btnRotR">⟳ 右90<span class="hk"> (R)</span></button>
+    <button class="dataonly" id="btnFlip">左右反転<span class="hk"> (F)</span></button>
+    <span class="sep"></span>
+    <button class="dataonly orange" id="btnScale">スケール校正<span class="hk"> (S)</span></button>
+    <button class="dataonly teal" id="btnC7">C7入力 / SVA<span class="hk"> (C)</span></button>
+    <button class="dataonly" id="btnUndo">取消<span class="hk"> (Z)</span></button>
+    <span class="sep"></span>
+    <button class="dataonly accent" id="btnRecord">記録して次へ<span class="hk"> (Enter)</span></button>
+    <button class="dataonly" id="btnPrev">前<span class="hk"> (P)</span></button>
+    <button class="dataonly" id="btnNext">次<span class="hk"> (N)</span></button>
+    <span class="sep"></span>
+    <button id="btnCsv">CSV保存<span class="hk"> (D)</span></button>
+    <label><input type="checkbox" id="chkPer"> 1枚ごとDL</label>
+    <label><input type="checkbox" id="chkScale"> スケール維持</label>
+    <span class="sep"></span>
+    <label>ID <input type="text" id="caseId" placeholder="case001"></label>
+    <button id="btnHelp">? ヘルプ</button>
+    <button id="btnPanel" class="mobileonly">📊 計測値</button>
+    <span id="counter">画像なし</span>
+  </div>
+
+  <div id="main">
+    <div id="stage">
+      <canvas id="canvas"></canvas>
+      <div id="empty">画像を開く（複数選択・フォルダのドラッグ&ドロップ可）</div>
+      <div id="help"></div>
+      <div id="zoomctl" class="mobileonly">
+        <button class="dataonly" id="btnZoomIn" aria-label="拡大">＋</button>
+        <button class="dataonly" id="btnZoomOut" aria-label="縮小">－</button>
+        <button class="dataonly" id="btnFit" aria-label="全体表示">⊡</button>
+      </div>
+    </div>
+    <div id="sidebar">
+      <h3>計測値</h3>
+      <div class="metrics" id="metrics"></div>
+      <div id="svaInfo" class="note" style="margin-top:8px"></div>
+      <div id="scaleInfo" class="scalebox"></div>
+      <h3 style="margin-top:16px">定義</h3>
+      <div class="note">
+        PI: S1終板の垂線と寛骨臼軸線の角度<br>
+        PT: 寛骨臼軸線と鉛直線の角度<br>
+        SS: S1終板と水平線の角度<br>
+        LL: L1終板とS1終板のCobb角<br>
+        SVA: C7中点とS1後縁の水平距離
+      </div>
+      <div class="note" style="margin-top:12px;color:#999">
+        画像は端末外に送信されません（ローカル処理）。
+      </div>
+    </div>
+  </div>
+  <div id="status">画像を開いてください</div>
+
+  <footer id="footer">
+    <span class="research">⚠ 研究用途のみ ／ 本ツールは医療機器ではありません。臨床診断・治療には使用しないでください。</span>
+    <a href="https://github.com/masaki39/spinopelvic-web" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://github.com/masaki39/spinopelvic-web/blob/main/LICENSE" target="_blank" rel="noopener">License: Apache-2.0</a>
+    <a id="dlLocal" class="grow" href="./index.html" download="spinopelvic-analyzer.html">⬇ ローカル版をダウンロード</a>
+  </footer>
+
+  <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
+
+  <script type="module" src="/main.js"></script>
+</body>
+</html>
