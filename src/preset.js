@@ -33,7 +33,7 @@ export const SPINOPELVIC = {
 
     // 終板の水平からの符号付き傾き（前縁が頭側＝正）。dxは常に前方向（正）にとる。
     const incl=(a,p)=>Math.atan2(p.y-a.y, antSign*(a.x-p.x))*RAD;
-    const SS=incl(P.s1a,P.s1p);                  // Sacral Slope
+    const SS=-incl(P.s1a,P.s1p);                  // Sacral Slope
 
     // 描画用 S1 終板法線（頭側向き）— s1a+s1p で確定
     const s1Vec={x:P.s1p.x-P.s1a.x, y:P.s1p.y-P.s1a.y};
@@ -46,13 +46,13 @@ export const SPINOPELVIC = {
     let hipAxis=null, PT=null, PI=null;
     if(P.femL&&P.femR){
       hipAxis=G.midpoint(P.femL,P.femR);
-      PT=Math.atan2(antSign*(s1Mid.x-hipAxis.x), hipAxis.y-s1Mid.y)*RAD;
+      PT=-Math.atan2(antSign*(s1Mid.x-hipAxis.x), hipAxis.y-s1Mid.y)*RAD;
       PI=PT+SS;                                   // Pelvic Incidence（幾何恒等式 PI=PT+SS）
     }
 
     // Lumbar Lordosis — l1a+l1p が揃ったら計算
     let LL=null;
-    if(P.l1a&&P.l1p) LL=SS-incl(P.l1a,P.l1p);   // Lumbar Lordosis（前弯=正, 後弯=負）
+    if(P.l1a&&P.l1p) LL=SS+incl(P.l1a,P.l1p);    // Lumbar Lordosis（前弯=正, 後弯=負）
 
     let svaPx=null, svaMm=null, c7Mid=null;
     if(P.c7a&&P.c7p){
