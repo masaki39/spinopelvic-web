@@ -63,6 +63,31 @@ common_femoral_radius, S1/L1/C7 の anterior/posterior x/y`（旧 Flutter 版と
 - 推奨: Google Chrome / Microsoft Edge（最新）。
 - `file://`（ダウンロードしてダブルクリック）でも全機能が動作します。サーバー不要。
 
+## 開発（ソースの分割管理 / ビルド）
+
+ソースは [Vite](https://vite.dev/) で `src/` 配下に分割管理し、配布用に
+**単一の `index.html`** へインライン化してビルドします（[vite-plugin-singlefile](https://github.com/richardtallent/vite-plugin-singlefile)）。
+
+```bash
+npm install      # 依存をインストール
+npm run dev      # 開発サーバ（HMR）
+npm run build    # src/ をビルドし、単一ファイルをリポジトリ直下の index.html に出力
+```
+
+| ファイル | 役割 |
+|---|---|
+| `src/index.html` | 画面のマークアップ（テンプレート） |
+| `src/style.css` | スタイル |
+| `src/geometry.js` | 幾何ユーティリティ（純粋関数） |
+| `src/preset.js` | 計測定義（ランドマーク・計測式・CSV スキーマ） |
+| `src/state.js` | アプリ状態と DOM 参照 |
+| `src/render.js` | キャンバス描画・ビュー変換 |
+| `src/app.js` | 画像入出力・計測・UI・イベント配線 |
+| `src/main.js` | エントリ（CSS と app を読み込む） |
+
+ビルド成果物のルート `index.html` が、GitHub Pages 配信物・ローカル配布物・
+「ローカル版ダウンロード」の実体を兼ねます。`npm run build` 後にコミットしてください。
+
 ## ライセンス / 謝辞
 
 - 本アプリは **Apache License 2.0** で公開しています（[LICENSE](LICENSE)）。

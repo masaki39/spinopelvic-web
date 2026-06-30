@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spinopelvic Analyzer (Web)</title>
+</head>
+<body>
+  <div id="toolbar">
+    <button id="btnOpen">画像を開く (O)</button>
+    <button class="dataonly" id="btnRotL">⟲ 左90 (⇧R)</button>
+    <button class="dataonly" id="btnRotR">⟳ 右90 (R)</button>
+    <button class="dataonly" id="btnFlip">左右反転 (F)</button>
+    <span class="sep"></span>
+    <button class="dataonly orange" id="btnScale">スケール校正 (S)</button>
+    <button class="dataonly teal" id="btnC7">C7入力 / SVA (C)</button>
+    <button class="dataonly" id="btnUndo">取消 (Z)</button>
+    <span class="sep"></span>
+    <button class="dataonly accent" id="btnRecord">記録して次へ (Enter)</button>
+    <button class="dataonly" id="btnPrev">前 (P)</button>
+    <button class="dataonly" id="btnNext">次 (N)</button>
+    <span class="sep"></span>
+    <button id="btnCsv">CSV保存 (D)</button>
+    <label><input type="checkbox" id="chkPer"> 1枚ごとDL</label>
+    <label><input type="checkbox" id="chkScale"> スケール維持</label>
+    <span class="sep"></span>
+    <label>ID <input type="text" id="caseId" placeholder="case001"></label>
+    <button id="btnHelp">? ヘルプ</button>
+    <span id="counter">画像なし</span>
+  </div>
+
+  <div id="main">
+    <div id="stage">
+      <canvas id="canvas"></canvas>
+      <div id="empty">画像を開く（複数選択・フォルダのドラッグ&ドロップ可）</div>
+      <div id="help"></div>
+    </div>
+    <div id="sidebar">
+      <h3>計測値</h3>
+      <div class="metrics" id="metrics"></div>
+      <div id="svaInfo" class="note" style="margin-top:8px"></div>
+      <div id="scaleInfo" class="scalebox"></div>
+      <h3 style="margin-top:16px">定義</h3>
+      <div class="note">
+        PI: S1終板の垂線と寛骨臼軸線の角度<br>
+        PT: 寛骨臼軸線と鉛直線の角度<br>
+        SS: S1終板と水平線の角度<br>
+        LL: L1終板とS1終板のCobb角<br>
+        SVA: C7中点とS1後縁の水平距離
+      </div>
+      <div class="note" style="margin-top:12px;color:#999">
+        画像は端末外に送信されません（ローカル処理）。
+      </div>
+    </div>
+  </div>
+  <div id="status">画像を開いてください</div>
+
+  <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
+
+  <script type="module" src="/main.js"></script>
+</body>
+</html>
