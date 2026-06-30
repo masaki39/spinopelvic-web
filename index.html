@@ -678,6 +678,7 @@ function startScale(){
 function setStatus(t){ $('status').textContent=t; }
 function updateUI(){
   const has=!!state.bitmap;
+  $('empty').style.display = has ? 'none' : 'flex';
   document.querySelectorAll('.dataonly').forEach(b=>b.disabled=!has);
   $('btnPrev').disabled=!has||state.index<=0;
   $('btnNext').disabled=!has||state.index>=state.images.length-1;
