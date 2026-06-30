@@ -1,7 +1,7 @@
 :root { --bg:#1e1e1e; --panel:#f4f4f5; --accent:#1565c0; --nav-h:56px; }
 * { box-sizing: border-box; }
 html, body { margin:0; height:100%; font-family: system-ui, "Hiragino Sans", sans-serif; }
-body { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflow:hidden; }
 #toolbar { display:flex; flex-wrap:wrap; gap:6px; align-items:center;
            padding:6px 8px; background:var(--bg); color:#fff; }
 #toolbar button { font-size:12px; padding:5px 9px; border:0; border-radius:5px;
