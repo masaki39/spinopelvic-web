@@ -76,9 +76,9 @@ common_femoral_radius, S1/L1/C7 の anterior/posterior x/y`（旧 Flutter 版と
 **単一の `index.html`** へインライン化してビルドします（[vite-plugin-singlefile](https://github.com/richardtallent/vite-plugin-singlefile)）。
 
 ```bash
-npm install      # 依存をインストール
-npm run dev      # 開発サーバ（HMR）
-npm run build    # src/ をビルドし、単一ファイルをリポジトリ直下の index.html に出力
+pnpm install      # 依存をインストール
+pnpm dev      # 開発サーバ（HMR）
+pnpm build    # src/ をビルドし、単一ファイルをリポジトリ直下の index.html に出力
 ```
 
 | ファイル | 役割 |
@@ -93,7 +93,7 @@ npm run build    # src/ をビルドし、単一ファイルをリポジトリ�
 | `src/main.js` | エントリ（CSS と app を読み込む） |
 
 ビルド成果物のルート `index.html` が、GitHub Pages 配信物・ローカル配布物・
-「ローカル版ダウンロード」の実体を兼ねます。`npm run build` 後にコミットしてください。
+「ローカル版ダウンロード」の実体を兼ねます。`pnpm build` 後にコミットしてください。
 
 ## ライセンス / 謝辞
 
