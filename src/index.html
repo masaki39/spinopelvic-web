@@ -3,68 +3,99 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1b1d20">
 <title>Spinopelvic Analyzer (Web)</title>
 </head>
 <body>
   <div id="toolbar">
-    <div class="toolgroup">
-      <button id="btnOpen">画像を開く<span class="hk"> (O)</span></button>
+    <div class="tbside" id="tbLeft">
+      <div class="toolgroup">
+        <button id="btnOpen" title="画像を開く（複数選択可）">📂 画像を開く<span class="hk"> (O)</span></button>
+      </div>
+      <div class="toolgroup" id="grpRotate">
+        <button class="dataonly" id="btnRotL" title="左に90°回転 (⇧R)">⟲ 左90<span class="hk"> (⇧R)</span></button>
+        <button class="dataonly" id="btnRotR" title="右に90°回転 (R)">⟳ 右90<span class="hk"> (R)</span></button>
+        <button class="dataonly" id="btnFlip" title="左右反転 (F)">⇋ 反転<span class="hk"> (F)</span></button>
+      </div>
+      <div class="toolgroup" id="grpMeasure">
+        <button class="dataonly orange" id="btnScale" title="基準線2点と実長でスケール校正 (S)"><span class="bl">📏 スケール</span><span class="hk"> (S)</span></button>
+        <button class="dataonly teal" id="btnC7" title="C7前/後縁を配置してSVAを計測 (C)"><span class="bl">C7 / SVA</span><span class="hk"> (C)</span></button>
+        <button class="dataonly" id="btnUndo" title="直前の点を取消 (Z)">↩ 取消<span class="hk"> (Z)</span></button>
+      </div>
     </div>
-    <div class="toolgroup">
-      <button class="dataonly" id="btnRotL">⟲ 左90<span class="hk"> (⇧R)</span></button>
-      <button class="dataonly" id="btnRotR">⟳ 右90<span class="hk"> (R)</span></button>
-      <button class="dataonly" id="btnFlip">左右反転<span class="hk"> (F)</span></button>
+    <div class="tbside" id="tbRight">
+      <label class="idlabel" title="CSVに記録される症例ID（ファイル名から自動入力）">ID <input type="text" id="caseId" placeholder="case001"></label>
+      <div class="toolgroup nomobile">
+        <button class="dataonly" id="btnPrev" title="前の画像 (P)" aria-label="前の画像">←<span class="hk"> (P)</span></button>
+        <button class="dataonly accent" id="btnRecord" title="計測結果を蓄積して次の画像へ (Enter)">✓ 記録して次へ<span class="hk"> (Enter)</span></button>
+        <button class="dataonly" id="btnNext" title="次の画像 (N)" aria-label="次の画像">→<span class="hk"> (N)</span></button>
+      </div>
+      <div class="toolgroup">
+        <button id="btnCsv" title="蓄積した全結果をCSVで保存 (D)">⬇ CSV保存<span class="hk"> (D)</span></button>
+        <label class="chk" title="記録ごとにCSV行と注釈PNGを都度ダウンロード"><input type="checkbox" id="chkPer">1枚ごとDL</label>
+        <label class="chk" title="校正したスケールを次の画像へ引き継ぐ"><input type="checkbox" id="chkScale">スケール維持</label>
+      </div>
+      <button id="btnHelp" title="ヘルプ (?)">? ヘルプ</button>
     </div>
-    <div class="toolgroup">
-      <button class="dataonly orange" id="btnScale">スケール校正<span class="hk"> (S)</span></button>
-      <button class="dataonly teal" id="btnC7">C7入力 / SVA<span class="hk"> (C)</span></button>
-      <button class="dataonly" id="btnUndo">取消<span class="hk"> (Z)</span></button>
-    </div>
-    <div class="toolgroup nomobile">
-      <button class="dataonly" id="btnPrev">前<span class="hk"> (P)</span></button>
-      <button class="dataonly accent" id="btnRecord">記録して次へ<span class="hk"> (Enter)</span></button>
-      <button class="dataonly" id="btnNext">次<span class="hk"> (N)</span></button>
-    </div>
-    <div class="toolgroup">
-      <button id="btnCsv">CSV保存<span class="hk"> (D)</span></button>
-      <label><input type="checkbox" id="chkPer"> 1枚ごとDL</label>
-      <label><input type="checkbox" id="chkScale"> スケール維持</label>
-    </div>
-    <label>ID <input type="text" id="caseId" placeholder="case001"></label>
-    <button id="btnHelp">? ヘルプ</button>
-    <span id="counter">画像なし</span>
+    <div class="tbfade" aria-hidden="true">›</div>
   </div>
 
   <div id="main">
     <div id="stage">
       <canvas id="canvas"></canvas>
-      <div id="empty">画像を開く（複数選択・フォルダのドラッグ&ドロップ可）</div>
-      <div id="help"></div>
-      <div id="zoomctl" class="mobileonly">
+      <div id="empty">
+        <div class="dropbox" role="button" tabindex="0">
+          <button id="btnEmptyOpen">📂 画像を開く</button>
+          <div class="hint">複数ファイル選択可<span class="pconly">・フォルダのドラッグ&ドロップ対応</span></div>
+        </div>
+      </div>
+      <div id="hud">
+        <div id="status" role="status">画像を開いて計測を開始</div>
+        <span id="counter" hidden>画像なし</span>
+      </div>
+      <div id="backdrop"></div>
+      <div id="zoomctl" class="touchonly">
         <button class="dataonly" id="btnZoomIn" aria-label="拡大">＋</button>
         <button class="dataonly" id="btnZoomOut" aria-label="縮小">－</button>
         <button class="dataonly" id="btnFit" aria-label="全体表示">⊡</button>
+        <button class="dataonly" id="btnUndoFloat" aria-label="直前の点を取消">↩</button>
       </div>
+      <div id="nudgepad" class="touchonly" aria-label="選択点の微調整">
+        <button id="nudgeClose" aria-label="微調整パッドを閉じる">✕</button>
+        <span id="nudgeLabel"></span>
+        <div class="pad">
+          <button class="u" data-dx="0" data-dy="-1" aria-label="上へ1px">▲</button>
+          <button class="l" data-dx="-1" data-dy="0" aria-label="左へ1px">◀</button>
+          <button class="r" data-dx="1" data-dy="0" aria-label="右へ1px">▶</button>
+          <button class="d" data-dx="0" data-dy="1" aria-label="下へ1px">▼</button>
+        </div>
+      </div>
+      <div id="help" role="dialog" aria-modal="true" aria-label="使い方"></div>
     </div>
     <div id="sidebar">
-      <h3>計測値</h3>
-      <div class="metrics" id="metrics"></div>
-      <div id="svaInfo" class="note" style="margin-top:8px"></div>
-      <div id="scaleInfo" class="scalebox"></div>
-      <h3 style="margin-top:16px">定義</h3>
-      <div class="note">
-        PI: S1終板の垂線と寛骨臼軸線の角度<br>
-        PT: 寛骨臼軸線と鉛直線の角度<br>
-        SS: S1終板と水平線の角度<br>
-        LL: L1終板とS1終板のCobb角<br>
-        SVA: C7中点とS1後縁の水平距離
-      </div>
-      <div class="note" style="margin-top:12px;color:#999">
-        画像は端末外に送信されません（ローカル処理）。
-      </div>
+      <section>
+        <h3>計測値</h3>
+        <div class="metrics" id="metrics"></div>
+        <div id="svaInfo" class="note"></div>
+        <div id="scaleInfo" class="scalebox"></div>
+      </section>
+      <section>
+        <h3>ランドマーク</h3>
+        <ol id="steps"></ol>
+      </section>
+      <section>
+        <h3>定義</h3>
+        <div class="note">
+          PI: S1終板の垂線と寛骨臼軸線の角度<br>
+          PT: 寛骨臼軸線と鉛直線の角度<br>
+          SS: S1終板と水平線の角度<br>
+          LL: L1終板とS1終板のCobb角<br>
+          SVA: C7中点とS1後縁の水平距離
+        </div>
+        <div class="note privacy">画像は端末外に送信されません（ローカル処理）。</div>
+      </section>
     </div>
   </div>
-  <div id="status">画像を開いてください</div>
 
   <footer id="footer">
     <span class="research">⚠ 研究用途のみ ／ 本ツールは医療機器ではありません。臨床診断・治療には使用しないでください。</span>
@@ -74,10 +105,10 @@
   </footer>
 
   <nav id="bottomnav">
-    <button class="dataonly" id="navPrev">← 前</button>
-    <button class="dataonly accent" id="navRecord">● 記録して次へ</button>
-    <button class="dataonly" id="navNext">次 →</button>
-    <button id="navPanel">📊 計測値</button>
+    <button class="dataonly" id="navPrev" aria-label="前の画像">←</button>
+    <button class="dataonly accent" id="navRecord">✓ 記録して次へ</button>
+    <button class="dataonly" id="navNext" aria-label="次の画像">→</button>
+    <button id="navPanel" aria-expanded="false">📊 計測値</button>
   </nav>
 
   <input type="file" id="fileInput" accept="image/*" multiple style="display:none">

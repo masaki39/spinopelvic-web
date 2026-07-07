@@ -21,6 +21,7 @@ export const state = {
   caseId:'',
   rows:[],
   rowByIndex:{},          // 画像index -> rows内の位置（同じ画像の重複記録を防ぐ）
+  csvSaved:false,         // rows を CSV 保存済みか（離脱警告の抑制に使用）
   dirty:false,            // 未記録の変更があるか
   keepScale:false,        // バッチでスケール校正を次画像へ維持
   result:null,

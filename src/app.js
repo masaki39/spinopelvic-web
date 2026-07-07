@@ -3,6 +3,10 @@ import { G } from './geometry.js';
 import { fileStamp, csvEsc, download, deriveId } from './utils.js';
 import { render, fit, zoomAt, toScreen, toImg, canvasBlob } from './render.js';
 
+// タッチ端末では文言を「タップ」「ボタン名」ベースにする（ホットキーが無いため）
+const TOUCH = matchMedia('(hover: none) and (pointer: coarse)').matches;
+const TAP = TOUCH ? 'タップ' : 'クリック';
+
 //==================================================================
 // 画像読み込み・回転
 //==================================================================
@@ -10,8 +14,12 @@ function setFiles(files){
   const imgs=[...files].filter(f=>f.type.startsWith('image/'))
                        .sort((a,b)=>a.name.localeCompare(b.name, undefined, {numeric:true}));
   if(!imgs.length) return;
+  const lose=[];
+  if(state.rows.length && !state.csvSaved) lose.push(`未保存のCSV記録（${state.rows.length}件）`);
+  if(hasUnsaved()) lose.push('配置中の点');
+  if(lose.length && !confirm(`${lose.join('と')}が失われます。新しい画像を開きますか？`)) return;
   state.images=imgs.map(f=>({file:f, name:f.name}));
-  state.rows=[]; state.rowByIndex={};   // 新しいバッチ＝記録をリセット
+  state.rows=[]; state.rowByIndex={}; state.csvSaved=false;   // 新しいバッチ＝記録をリセット
   loadImage(0);
 }
 
@@ -90,10 +98,14 @@ function place(id, p){
   recompute();
 }
 function undo(){
+  // C7配置中でまだC7点が無い場合はモード終了のみ（無関係な点を消さない）
+  if(state.placingC7 && !state.points.c7a && !state.points.c7p){
+    state.placingC7=false; setStatus('C7入力を中止しました', 3000); updateUI(); render(); return;
+  }
   const id=state.placedOrder.pop();
   if(!id) return;
   delete state.points[id];
-  if(id==='c7a'||id==='c7p') state.placingC7=false;
+  if(id==='c7a'||id==='c7p') state.placingC7=true;   // C7点の取消は置き直しモードを維持
   state.active=state.placedOrder[state.placedOrder.length-1]||null;
   state.dirty=true; recompute(); updateUI(); render();
 }
@@ -107,13 +119,13 @@ function navTo(i){
 
 async function recordAndNext(){
   recompute();
-  if(!state.result?.complete){ setStatus('必須点（大腿骨頭L/R・S1・L1）が未配置です'); return; }
+  if(!state.result?.complete){ setStatus('必須点（大腿骨頭L/R・S1・L1）が未配置です', 4000); return; }
   state.caseId=$('caseId').value.trim();
   const row=state.preset.csvRow(state, state.result);
   const pos=state.rowByIndex[state.index];
   if(pos!==undefined){ state.rows[pos]=row; }          // 同じ画像の再記録は置換
   else { state.rowByIndex[state.index]=state.rows.length; state.rows.push(row); }
-  state.dirty=false;
+  state.dirty=false; state.csvSaved=false;
   const base=(state.caseId||state.currentName||'case').replace(/[\\/:*?"<>| ]/g,'_');
 
   if(state.out.perImage){
@@ -124,7 +136,7 @@ async function recordAndNext(){
   if(state.index < state.images.length-1){
     loadImage(state.index+1);
   }else{
-    setStatus('全画像の記録完了（計 '+state.rows.length+' 件）。CSV保存(D)で書き出せます。');
+    setStatus(`全画像の記録完了（計 ${state.rows.length} 件）。${TOUCH?'「CSV保存」':'CSV保存(D)'}で書き出せます。`, 10000);
     updateUI();
   }
 }
@@ -137,15 +149,20 @@ function csvText(rows){
 }
 function csvBlob(rows){ return new Blob(['﻿'+csvText(rows)], {type:'text/csv;charset=utf-8'}); }
 function saveCsv(){
-  if(!state.rows.length){ setStatus('記録がありません（Enterで記録してから保存）'); return; }
+  if(!state.rows.length){
+    setStatus(TOUCH ? '記録がありません（「記録して次へ」で記録してから保存）'
+                    : '記録がありません（Enterで記録してから保存）', 4000);
+    return;
+  }
   download(csvBlob(state.rows), `spinopelvic_batch_${fileStamp()}.csv`);
+  state.csvSaved=true;
 }
 
 //==================================================================
 // ヒットテスト・ポインタ操作
 //==================================================================
-function hitTest(sp){
-  const thr=10, P=state.points;
+function hitTest(sp, thr=10){
+  const P=state.points;
   for(const [id,center] of [['femL',P.femL],['femR',P.femR]]){
     if(!center) continue;
     const h=toScreen({x:center.x+state.radius, y:center.y});
@@ -169,56 +186,122 @@ function applyDrag(hit, ip){
   }
   recompute();
 }
+// ピンチ開始時にドラッグを巻き戻すためのスナップショット
+function dragSnapshot(hit){
+  if(!hit) return null;
+  const P=state.points, sc=state.scale;
+  switch(hit.type){
+    case 'point': return {p:{...P[hit.id]}};
+    case 'radiusL': case 'radiusR': return {r:state.radius};
+    case 'scale1': return {p:sc.p1&&{...sc.p1}, mm:sc.pxPerMm};
+    case 'scale2': return {p:sc.p2&&{...sc.p2}, mm:sc.pxPerMm};
+    default: return null;
+  }
+}
+function dragRollback(hit, snap){
+  if(!hit||!snap) return;
+  const P=state.points, sc=state.scale;
+  switch(hit.type){
+    case 'point': P[hit.id]=snap.p; break;
+    case 'radiusL': case 'radiusR': state.radius=snap.r; break;
+    case 'scale1': sc.p1=snap.p; sc.pxPerMm=snap.mm; break;
+    case 'scale2': sc.p2=snap.p; sc.pxPerMm=snap.mm; break;
+  }
+  recompute();
+}
 function scaleTap(ip){
   const sc=state.scale;
-  if(sc.setting===1){ sc.p1=ip; sc.setting=2; setStatus('スケール: 基準線の終点をクリック'); }
+  if(sc.setting===1){ sc.p1=ip; sc.setting=2; setStatus(`スケール: 基準線の終点を${TAP}`); }
   else if(sc.setting===2){
     sc.p2=ip; sc.setting=0;
     const v=prompt('基準線の実長 (mm) を入力', '100');
     const mm=parseFloat(v);
-    if(mm>0){ sc.realMm=mm; recalcScale(); state.dirty=true; setStatus(`スケール設定: 1mm = ${sc.pxPerMm.toFixed(2)}px`); }
-    else { sc.p1=null; sc.p2=null; setStatus('スケール校正をキャンセルしました'); }
+    if(mm>0){ sc.realMm=mm; recalcScale(); state.dirty=true; setStatus(`スケール設定: 1mm = ${sc.pxPerMm.toFixed(2)}px`, 5000); }
+    else { sc.p1=null; sc.p2=null; setStatus('スケール校正をキャンセルしました', 3000); }
     recompute();
   }
 }
 function placeOrSelect(ip){
   const pid=pendingStepId();
   if(pid){ place(pid, ip); return; }
-  // 最近傍点を選択
+  // 最近傍点を選択（近くに無ければ選択解除 → 微調整パッドも閉じる）
   let best=null, bd=20;
   for(const s of state.preset.steps){ const p=state.points[s.id]; if(!p) continue;
     const c=toScreen(p), d=Math.hypot(c.x-toScreen(ip).x, c.y-toScreen(ip).y); if(d<bd){ bd=d; best=s.id; } }
-  if(best) state.active=best;
+  state.active=best;
 }
 
 let down=null;
+const pointers=new Map();   // pointerId -> {x,y}（ピンチズーム用）
+let pinch=null;
 canvas.addEventListener('pointerdown', e=>{
   if(!state.bitmap) return;
-  canvas.setPointerCapture(e.pointerId);
+  // モバイル: 計測値シートを開いたままステージをタップ → シートを閉じるだけ
+  if(document.body.classList.contains('panel-open')){ togglePanel(); return; }
+  try{ canvas.setPointerCapture(e.pointerId); }catch{}
   const sp={x:e.offsetX,y:e.offsetY};
-  down={sx:sp.x, sy:sp.y, hit:hitTest(sp), moved:0, ox:state.view.ox, oy:state.view.oy};
+  pointers.set(e.pointerId, sp);
+  if(pointers.size===2){                 // 2本指 → ピンチズーム開始（配置/ドラッグは中断して巻き戻す）
+    if(down&&down.hit) dragRollback(down.hit, down.orig);
+    down=null; state.mouseImg=null;
+    const [a,b]=[...pointers.values()];
+    pinch={ dist:Math.hypot(a.x-b.x,a.y-b.y), scale:state.view.scale,
+            mid:{x:(a.x+b.x)/2, y:(a.y+b.y)/2} };
+    document.body.classList.add('dragging');
+    render(); return;
+  }
+  const hit=hitTest(sp, e.pointerType==='touch'?24:10);   // 指では判定を広めに
+  down={sx:sp.x, sy:sp.y, hit, orig:dragSnapshot(hit), moved:0, ox:state.view.ox, oy:state.view.oy};
 });
 canvas.addEventListener('pointermove', e=>{
   const sp={x:e.offsetX,y:e.offsetY};
+  if(pointers.has(e.pointerId)) pointers.set(e.pointerId, sp);
+  if(pinch && pointers.size>=2){
+    const [a,b]=[...pointers.values()];
+    const dist=Math.hypot(a.x-b.x,a.y-b.y);
+    const mid={x:(a.x+b.x)/2, y:(a.y+b.y)/2};
+    const v=state.view;
+    v.ox+=mid.x-pinch.mid.x; v.oy+=mid.y-pinch.mid.y;   // 2本指の平行移動でパン
+    if(pinch.dist>0) zoomAt(mid.x, mid.y, (pinch.scale*dist/pinch.dist)/v.scale);
+    pinch.mid=mid;
+    return;
+  }
   if(state.bitmap) state.mouseImg=toImg(sp);
   if(down){
     const dx=sp.x-down.sx, dy=sp.y-down.sy;
     down.moved=Math.max(down.moved, Math.hypot(dx,dy));
-    if(down.hit) applyDrag(down.hit, toImg(sp));
-    else if(down.moved>=5){ state.view.ox=down.ox+dx; state.view.oy=down.oy+dy; }
+    // タップ閾値(5px)を超えるまではドラッグを発動しない
+    // （クリック時の微小ジッタで既存点が動き、タップ配置と重畳するのを防ぐ）
+    if(down.moved>=5){
+      document.body.classList.add('dragging');   // HUDを退避
+      if(down.hit) applyDrag(down.hit, toImg(sp));
+      else { state.view.ox=down.ox+dx; state.view.oy=down.oy+dy; state.view.custom=true; }
+    }
   }
   render();
   if(down) updateUI();
 });
+function endPointer(e){
+  pointers.delete(e.pointerId);
+  if(pinch && pointers.size<2) pinch=null;
+  if(pointers.size===0) document.body.classList.remove('dragging');
+}
 canvas.addEventListener('pointerup', e=>{
-  if(!down) return;
+  endPointer(e);
+  if(e.pointerType==='touch') state.mouseImg=null;   // タッチ後にルーペを残さない
+  if(!down){ render(); return; }
   const sp={x:e.offsetX,y:e.offsetY}, ip=toImg(sp), tap=down.moved<5;
   if(state.scale.setting>0 && tap) scaleTap(ip);
   else if(tap){
-    if(down.hit&&down.hit.type==='point') state.active=down.hit.id;
+    // 配置すべき点が残っている間はタップ＝配置を最優先（既存点の近くでも奪わせない）
+    if(pendingStepId()) placeOrSelect(ip);
+    else if(down.hit&&down.hit.type==='point') state.active=down.hit.id;
     else if(!down.hit) placeOrSelect(ip);
   }
   down=null; updateUI(); render();
+});
+canvas.addEventListener('pointercancel', e=>{
+  endPointer(e); down=null; state.mouseImg=null; render();
 });
 canvas.addEventListener('pointerleave', ()=>{ state.mouseImg=null; render(); });
 canvas.addEventListener('wheel', e=>{ if(!state.bitmap) return; e.preventDefault();
@@ -233,10 +316,17 @@ function nudge(dx,dy){
 }
 window.addEventListener('keydown', e=>{
   const inField = document.activeElement && document.activeElement.tagName==='INPUT';
-  if(inField){ if(e.key==='Escape') document.activeElement.blur(); else return; }
+  if(inField){
+    if(e.key==='Escape') document.activeElement.blur();
+    else if(e.key==='Enter' && document.activeElement.id==='caseId'){
+      e.preventDefault(); document.activeElement.blur(); recordAndNext();   // ID修正→Enterで記録
+    }
+    return;
+  }
   if(e.metaKey||e.ctrlKey) return;        // ブラウザのCmd/Ctrlショートカットを優先
   if($('help').classList.contains('show')){   // ヘルプ表示中はキー操作を遮断
-    if(['Escape','?','h','H'].includes(e.key)) $('help').classList.remove('show');
+    if(['Escape','?','h','H'].includes(e.key)) closeHelp();
+    else if(e.key==='Tab'){ e.preventDefault(); $('helpClose').focus(); }   // ダイアログ外へ抜けない
     return;
   }
   const step = e.shiftKey?5 : (e.altKey?0.2 : 1);
@@ -260,37 +350,59 @@ window.addEventListener('keydown', e=>{
     case 'ArrowUp':    e.preventDefault(); nudge(0,-step); break;
     case 'ArrowDown':  e.preventDefault(); nudge(0,step); break;
     case '?': case 'h': case 'H': toggleHelp(); break;
-    case 'Escape': if(state.scale.setting){ state.scale.setting=0; setStatus('校正中止'); } $('help').classList.remove('show'); break;
+    case 'Escape':
+      if(state.scale.setting) startScale();          // 校正中止（トグル）
+      else if(state.placingC7) startC7();            // C7入力中止（トグル）
+      closeHelp();
+      break;
   }
 });
 
 function startC7(){
+  if(state.placingC7){   // モード中にもう一度押すと中止
+    state.placingC7=false;
+    delete state.points.c7a; delete state.points.c7p;
+    state.placedOrder=state.placedOrder.filter(id=>id!=='c7a'&&id!=='c7p');
+    recompute(); setStatus('C7入力を中止しました', 3000); updateUI(); render(); return;
+  }
   if(!state.result?.complete){ setStatus('先にPI/PT/SS/LL計測を完了してください'); return; }
   state.placingC7=true;
   delete state.points.c7a; delete state.points.c7p;
   state.placedOrder=state.placedOrder.filter(id=>id!=='c7a'&&id!=='c7p');
   state.active=null;
-  setStatus('C7前縁→C7後縁をクリック（SVA算出）'); updateUI(); render();
+  setStatus(`C7前縁→C7後縁を${TAP}（SVA算出）`); updateUI(); render();
 }
 function startScale(){
   if(!state.bitmap) return;
+  if(state.scale.setting>0){   // モード中にもう一度押すと中止
+    state.scale.setting=0; state.scale.p1=null; state.scale.p2=null;
+    recompute(); setStatus('スケール校正を中止しました', 3000); updateUI(); render(); return;
+  }
   state.scale={ p1:null,p2:null,realMm:null,pxPerMm:null, setting:1 };
-  recompute(); setStatus('スケール: 基準線の始点をクリック'); updateUI(); render();
+  recompute(); setStatus(`スケール: 基準線の始点を${TAP}（もう一度押すと中止）`); updateUI(); render();
 }
 
 //==================================================================
 // UI 更新
 //==================================================================
-function setStatus(t){ $('status').textContent=t; }
+// holdMs を指定すると、その間 updateUI の自動ガイダンスに上書きされない
+// （完了・中止などの一時メッセージ用。明示的な setStatus は常に優先される）
+let statusHoldUntil=0;
+function setStatus(t, holdMs=0){
+  $('status').textContent=t;
+  statusHoldUntil = holdMs ? Date.now()+holdMs : 0;
+}
 function updateUI(){
   const has=!!state.bitmap;
   $('empty').style.display = has ? 'none' : 'flex';
+  $('zoomctl').style.display = has ? '' : 'none';
   document.querySelectorAll('.dataonly').forEach(b=>b.disabled=!has);
   $('btnPrev').disabled=!has||state.index<=0;
   $('btnNext').disabled=!has||state.index>=state.images.length-1;
   $('navPrev').disabled=!has||state.index<=0;
   $('navNext').disabled=!has||state.index>=state.images.length-1;
   const rec = has && state.rowByIndex[state.index]!==undefined;
+  $('counter').hidden = !has;
   $('counter').textContent = has
     ? `画像 ${state.index+1} / ${state.images.length}` + (rec?' ✓記録済':'') + (hasUnsaved()?' ●未記録':'')
     : '画像なし';
@@ -308,7 +420,7 @@ function updateUI(){
       sv.innerHTML = res.svaMm!=null
         ? `<b>SVA:</b> ${res.svaMm.toFixed(1)} mm <span style="color:#999">(${res.svaPx.toFixed(1)} px)</span>`
         : `<b>SVA:</b> ${res.svaPx.toFixed(1)} px <span style="color:#999">（mm換算はスケール校正が必要）</span>`;
-    } else sv.innerHTML = `<span style="color:#999">SVA未計測（C入力でC7配置）</span>`;
+    } else sv.innerHTML = `<span style="color:#999">SVA未計測（${TOUCH?'C7 / SVAボタンで配置':'C入力でC7配置'}）</span>`;
   } else {
     m.innerHTML = `<div class="note" style="grid-column:1/3">必須点を配置すると計測値が表示されます。</div>`;
     $('svaInfo').innerHTML='';
@@ -321,20 +433,73 @@ function updateUI(){
   else { sb.style.background='#eee'; sb.style.border='1px solid #ccc';
     sb.innerHTML='📏 スケール未校正（SVAはpx表示）'; }
 
-  // ステータス（校正中でなければ）
-  if(sc.setting===0){
+  // スケール/C7ボタン: モード中は「中止」に切替
+  const scOn=sc.setting>0, c7On=state.placingC7;
+  $('btnScale').classList.toggle('modeon', scOn);
+  $('btnScale').querySelector('.bl').textContent = scOn ? '✕ 中止' : '📏 スケール';
+  $('btnC7').classList.toggle('modeon', c7On);
+  $('btnC7').querySelector('.bl').textContent = c7On ? '✕ 中止' : 'C7 / SVA';
+
+  // ステータス（校正中・一時メッセージ表示中でなければ）
+  if(Date.now()<statusHoldUntil){
+    // 完了/中止などの一時メッセージを保持
+  }else if(!has){
+    setStatus(TOUCH ? '画像を選択して計測を開始' : '画像を開いて計測を開始（O）');
+  }else if(sc.setting===0){
     const pid=pendingStepId();
-    setStatus(pid ? `次: ${labelOf(pid)} をクリック（矢印キーで微調整）`
-                  : '計測完了。Enter/Eで記録して次へ。点はドラッグで調整可。');
+    if(pid){
+      setStatus(TOUCH ? `次: ${labelOf(pid)} をタップ`
+                      : `次: ${labelOf(pid)} をクリック（配置後は矢印キーで微調整）`);
+    }else if(TOUCH && res){
+      // タッチ端末はサイドバーが隠れているため、主要値をピルに常時表示
+      const fm=v=>v==null?'—':v.toFixed(1);
+      setStatus(`PI ${fm(res.PI)}° ／ PT ${fm(res.PT)}° ／ SS ${fm(res.SS)}° ／ LL ${fm(res.LL)}° — 「記録して次へ」で保存`);
+    }else{
+      setStatus('計測完了。Enter/Eで記録して次へ。点はドラッグで調整可。');
+    }
   }
+
+  renderSteps();
+  updateNudgepad();
+}
+
+// ランドマーク進捗リスト（配置済み✓ / 次● / 未配置）。配置済みは押すと選択。
+function renderSteps(){
+  const ol=$('steps'); if(!ol) return;
+  const has=!!state.bitmap;
+  const pid=has ? pendingStepId() : null;
+  ol.innerHTML = state.preset.steps.map(s=>{
+    const placed=!!state.points[s.id];
+    const c7ready=has && !placed && s.optional && state.result?.complete && !state.placingC7;
+    const cls=['', placed?'done':(s.id===pid?'next':'todo'),
+               state.active===s.id?'sel':'', c7ready?'ready':''].join(' ').trim();
+    const st = placed ? (state.active===s.id?'選択中':'✓')
+                      : (s.id===pid?'●':(c7ready?'＋開始':(s.optional?'任意':'')));
+    return `<li class="${cls}" data-id="${s.id}">
+      <span class="dotc" style="background:${s.color}"></span>
+      <span class="lbl">${s.label}</span><span class="st">${st}</span></li>`;
+  }).join('');
+}
+
+// タッチ用微調整パッド: 点を選択中のみ表示
+function updateNudgepad(){
+  const el=$('nudgepad'); if(!el) return;
+  const show = !!(state.bitmap && state.active && state.points[state.active]);
+  el.classList.toggle('show', show);
+  if(show) $('nudgeLabel').textContent = labelOf(state.active);
 }
 
 //==================================================================
 // ヘルプ
 //==================================================================
-function toggleHelp(){ $('help').classList.toggle('show'); }
-$('help').innerHTML = `
-  <h2>Spinopelvic Analyzer (Web) — ホットキー</h2>
+function openHelp(){ $('help').classList.add('show'); $('helpClose').focus(); }
+function closeHelp(){
+  if(!$('help').classList.contains('show')) return;
+  $('help').classList.remove('show'); $('btnHelp').focus();
+}
+function toggleHelp(){ $('help').classList.contains('show') ? closeHelp() : openHelp(); }
+const hotkeyTable = `
+  <h3>ホットキー</h3>
   <table>
     <tr><td><kbd>O</kbd></td><td>画像を開く（複数選択可）</td><td><kbd>R</kbd> / <kbd>⇧R</kbd></td><td>右/左90°回転</td></tr>
     <tr><td><kbd>F</kbd></td><td>左右反転</td><td><kbd>S</kbd></td><td>スケール校正</td></tr>
@@ -344,14 +509,43 @@ $('help').innerHTML = `
     <tr><td><kbd>Enter</kbd> / <kbd>E</kbd></td><td>記録して次の画像へ</td><td><kbd>N</kbd> / <kbd>P</kbd></td><td>次 / 前の画像</td></tr>
     <tr><td><kbd>D</kbd></td><td>蓄積CSVを保存</td><td><kbd>+</kbd>/<kbd>-</kbd>/<kbd>0</kbd></td><td>ズーム / フィット</td></tr>
     <tr><td>ホイール</td><td>カーソル位置でズーム</td><td><kbd>?</kbd></td><td>このヘルプ</td></tr>
-  </table>
-  <p style="margin-top:18px;color:#bbb">クリックして閉じる</p>`;
-$('help').addEventListener('click', ()=>$('help').classList.remove('show'));
+  </table>`;
+const touchTable = `
+  <h3>タッチ操作</h3>
+  <table>
+    <tr><td>タップ</td><td>現在のランドマークを配置 / 点を選択</td></tr>
+    <tr><td>ドラッグ</td><td>点の移動 ／ 余白で画像をパン</td></tr>
+    <tr><td>ピンチ</td><td>2本指でズーム</td></tr>
+    <tr><td>＋ / － / ⊡</td><td>ズームイン / アウト / 全体表示</td></tr>
+    <tr><td>↩</td><td>直前の点を取消</td></tr>
+    <tr><td>▲◀▶▼</td><td>選択中の点を1pxずつ微調整（右下のパッド）</td></tr>
+  </table>`;
+$('help').innerHTML = `
+  <div class="helpbox">
+    <h2>Spinopelvic Analyzer — 使い方 <button id="helpClose" aria-label="閉じる">✕</button></h2>
+    <ol class="flow">
+      <li>「画像を開く」でX線画像を選択（複数選択可）</li>
+      <li>ガイドに従い${TAP}で配置: 左右大腿骨頭中心 → S1前/後縁 → L1前/後縁</li>
+      <li>点はドラッグで微調整${TOUCH?'（右下の矢印パッドで1pxずつ調整可）':'（矢印キー=1px, ⇧=5px, ⌥=0.2px）'}</li>
+      <li>必要に応じて「📏 スケール」で実寸校正、「C7 / SVA」でSVA計測</li>
+      <li>「記録して次へ」で結果を蓄積 → 最後に「CSV保存」で一括出力</li>
+    </ol>
+    ${TOUCH ? touchTable : hotkeyTable}
+    <p class="closeHint">背景を${TAP}するか ✕ で閉じる</p>
+  </div>`;
+// 背景クリックまたは✕で閉じる（本文はテキスト選択できるよう閉じない）
+$('help').addEventListener('click', e=>{
+  if(e.target.id==='help' || e.target.closest('#helpClose')) closeHelp();
+});
 
 //==================================================================
 // ボタン・入力配線
 //==================================================================
 $('btnOpen').onclick=()=>fileInput.click();
+document.querySelector('#empty .dropbox').onclick=()=>fileInput.click();
+document.querySelector('#empty .dropbox').addEventListener('keydown', e=>{
+  if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fileInput.click(); }
+});
 fileInput.onchange=e=>{ if(e.target.files.length) setFiles(e.target.files); };
 $('btnRotL').onclick=()=>rotate(-90);
 $('btnRotR').onclick=()=>rotate(90);
@@ -368,15 +562,48 @@ $('btnHelp').onclick=toggleHelp;
 function togglePanel(){
   const open=document.body.classList.toggle('panel-open');
   $('navPanel').textContent = open ? '✕ 閉じる' : '📊 計測値';
+  $('navPanel').setAttribute('aria-expanded', String(open));
 }
 $('navPanel').onclick = togglePanel;
+$('backdrop').onclick = ()=>{ if(document.body.classList.contains('panel-open')) togglePanel(); };
 $('navPrev').onclick   = ()=>navTo(state.index-1);
 $('navNext').onclick   = ()=>navTo(state.index+1);
 $('navRecord').onclick = recordAndNext;
-// モバイル: オンスクリーンのズーム/フィット（ホットキー +/-/0 の代替）
+// タッチ端末: オンスクリーンのズーム/フィット/取消（ホットキーの代替）
 $('btnZoomIn').onclick =()=>zoomAt(canvas.clientWidth/2, canvas.clientHeight/2, 1.25);
 $('btnZoomOut').onclick=()=>zoomAt(canvas.clientWidth/2, canvas.clientHeight/2, 1/1.25);
 $('btnFit').onclick    =()=>{ fit(); render(); };
+$('btnUndoFloat').onclick=undo;
+
+// タッチ端末: 選択点の1px微調整パッド（長押しでリピート）
+let nudgeTimer=null;
+document.querySelectorAll('#nudgepad .pad button').forEach(b=>{
+  const dx=+b.dataset.dx, dy=+b.dataset.dy;
+  b.addEventListener('pointerdown', e=>{
+    e.preventDefault(); nudge(dx,dy);
+    nudgeTimer=setTimeout(function rep(){ nudge(dx,dy); nudgeTimer=setTimeout(rep,90); },350);
+  });
+  ['pointerup','pointerleave','pointercancel'].forEach(ev=>
+    b.addEventListener(ev, ()=>clearTimeout(nudgeTimer)));
+});
+$('nudgeClose').onclick=()=>{ state.active=null; updateUI(); render(); };
+
+// ランドマークリスト: 配置済みは選択、C7は未配置でも開始できる
+$('steps').addEventListener('click', e=>{
+  const li=e.target.closest('li[data-id]'); if(!li||!state.bitmap) return;
+  const id=li.dataset.id;
+  if(state.points[id]){ state.active=id; updateUI(); render(); }
+  else if((id==='c7a'||id==='c7p') && state.result?.complete && !state.placingC7) startC7();
+});
+
+// モバイル: ツールバーが右端までスクロールされたらフェードを消す
+{
+  const tb=$('toolbar');
+  const updTb=()=>tb.classList.toggle('scroll-end', tb.scrollLeft+tb.clientWidth>=tb.scrollWidth-4);
+  tb.addEventListener('scroll', updTb, {passive:true});
+  window.addEventListener('resize', updTb);
+  updTb();
+}
 $('chkPer').onchange=e=>state.out.perImage=e.target.checked;
 $('chkScale').onchange=e=>state.keepScale=e.target.checked;
 $('caseId').oninput=e=>state.caseId=e.target.value;
@@ -387,9 +614,33 @@ document.addEventListener('drop', e=>{
   const items=e.dataTransfer.files; if(items&&items.length) setFiles(items);
 });
 
-window.addEventListener('resize', ()=>{ if(state.bitmap) fit(); render(); });
+// リサイズ: ユーザーがズーム/パン済みなら中心を保って維持（モバイルのキーボード表示等で
+// 拡大状態を破棄しない）。フィット状態のままなら追従して再フィット。
+let lastCW=0, lastCH=0;
+function onResize(){
+  const cw=canvas.clientWidth, ch=canvas.clientHeight;
+  if(state.bitmap){
+    const v=state.view;
+    if(!v.custom){ fit(); }
+    else if(lastCW&&lastCH){
+      const cx=(lastCW/2-v.ox)/v.scale, cy=(lastCH/2-v.oy)/v.scale;
+      v.ox=cw/2-cx*v.scale; v.oy=ch/2-cy*v.scale;
+    }
+  }
+  lastCW=cw; lastCH=ch; render();
+}
+window.addEventListener('resize', onResize);
+
+// 未保存データがある間はリロード/タブ閉鎖の前に警告
+window.addEventListener('beforeunload', e=>{
+  if((state.rows.length && !state.csvSaved) || hasUnsaved()){
+    e.preventDefault(); e.returnValue='';
+  }
+});
+
 $('empty').style.display='flex';
 updateUI();
+onResize();
 
 //==================================================================
 // 自己テスト（コンソールで runSelfTest() ）

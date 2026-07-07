@@ -1,119 +1,274 @@
-:root { --bg:#1e1e1e; --panel:#f4f4f5; --accent:#1565c0; --nav-h:56px; }
+:root {
+  --bg:#1b1d20; --bg2:#26282c; --bg3:#3a3d42; --line:#3d4046;
+  --panel:#f4f4f5; --txt:#e9e9eb; --dim:#a2a5aa;
+  --accent:#1e6fd0; --accent-h:#2f81e2;
+  --orange:#e07000; --teal:#00897b;
+  --nav-h:60px;
+}
 * { box-sizing: border-box; }
 html, body { margin:0; height:100%; font-family: system-ui, "Hiragino Sans", sans-serif; }
-body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflow:hidden; }
-#toolbar { display:flex; flex-wrap:wrap; gap:6px; align-items:center;
-           padding:6px 8px; padding-top: max(6px, env(safe-area-inset-top)); background:var(--bg); color:#fff; }
-#toolbar button { font-size:12px; padding:5px 9px; border:0; border-radius:5px;
-                  background:#3a3a3a; color:#fff; cursor:pointer; }
-#toolbar button:hover { background:#505050; }
-#toolbar button:disabled { opacity:.4; cursor:default; }
-#toolbar .accent { background:var(--accent); }
-#toolbar .teal { background:#00897b; }
-#toolbar .orange { background:#ef6c00; }
-#toolbar label { font-size:12px; display:flex; align-items:center; gap:4px; }
-#toolbar input[type=text] { font-size:12px; padding:4px 6px; border-radius:4px; border:1px solid #777;
-                            background:#2a2a2a; color:#fff; width:120px; }
+body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflow:hidden; background:var(--bg); }
+button { touch-action:manipulation; font-family:inherit; }
+:focus-visible { outline:2px solid var(--accent-h); outline-offset:1px; }
+
+/*==================================================================
+  ツールバー
+==================================================================*/
+#toolbar { display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center;
+           padding:6px 10px; padding-top: max(6px, env(safe-area-inset-top));
+           background:var(--bg); color:var(--txt); position:relative; }
+.tbside { display:flex; flex-wrap:wrap; gap:6px; align-items:center; min-width:0; }
+#tbRight { margin-left:auto; }
 .toolgroup { display:flex; align-items:center; gap:4px;
-             background:#2a2a2a; border-radius:6px; padding:3px 6px; }
-#counter { font-size:12px; color:#bbb; margin-left:auto; }
+             background:var(--bg2); border-radius:8px; padding:3px; }
+#toolbar button { font-size:12.5px; padding:6px 10px; border:0; border-radius:6px;
+                  background:transparent; color:var(--txt); cursor:pointer;
+                  white-space:nowrap; transition:background .12s; }
+#toolbar > .tbside > button,
+#toolbar #btnHelp { background:var(--bg2); padding:8px 12px; }
+#toolbar button:hover { background:var(--bg3); }
+#toolbar button:disabled { opacity:.38; cursor:default; background:transparent; }
+#toolbar .accent { background:var(--accent); }
+#toolbar .accent:hover { background:var(--accent-h); }
+#toolbar .accent:disabled { background:transparent; }
+#toolbar .teal { color:#5fd6c9; }
+#toolbar .orange { color:#ffb066; }
+#toolbar button.modeon { background:var(--accent); color:#fff; }
+#toolbar button.modeon:hover { background:var(--accent-h); }
+#toolbar .hk { color:#9aa0a8; font-size:11px; }
+#toolbar .accent .hk { color:#cfe2f7; }
+.idlabel { font-size:12px; display:flex; align-items:center; gap:6px; color:var(--dim); }
+#toolbar input[type=text] { font-size:12.5px; padding:6px 8px; border-radius:6px; border:1px solid #4a4d52;
+                            background:var(--bg2); color:var(--txt); width:92px; }
+#toolbar input[type=text]:focus { border-color:var(--accent-h); outline:none; }
+.chk { font-size:12px; display:flex; align-items:center; gap:5px; color:var(--txt);
+       background:var(--bg); border:1px solid #4a4d52; border-radius:999px;
+       padding:4px 9px; cursor:pointer; white-space:nowrap; user-select:none; }
+.chk input { accent-color:var(--accent); margin:0; }
+.chk:has(input:checked) { border-color:var(--accent-h); background:#1c3556; }
+.tbfade { display:none; }
+
+/*==================================================================
+  メイン（ステージ＋サイドバー）
+==================================================================*/
 #main { flex:1; display:flex; min-height:0; }
 #stage { flex:1; position:relative; background:#222; min-width:0; }
 #canvas { width:100%; height:100%; display:block; cursor:crosshair; touch-action:none; }
-#empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-         color:#888; font-size:15px; pointer-events:none; }
-#sidebar { width:300px; background:var(--panel); padding:12px; overflow:auto; }
-#sidebar h3 { margin:0 0 6px; font-size:13px; }
+
+/* 空状態: クリック/タップできるドロップゾーン */
+#empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:24px; }
+#empty .dropbox { display:flex; flex-direction:column; align-items:center; gap:12px;
+                  border:2px dashed #56595e; border-radius:16px; padding:36px 48px;
+                  cursor:pointer; transition:border-color .15s, background .15s; max-width:92%; }
+#empty .dropbox:hover { border-color:var(--accent-h); background:#ffffff08; }
+#btnEmptyOpen { font-size:15px; font-weight:600; padding:12px 24px; border:0; border-radius:10px;
+                background:var(--accent); color:#fff; cursor:pointer; }
+#btnEmptyOpen:hover { background:var(--accent-h); }
+#empty .hint { color:#8b8e94; font-size:12.5px; text-align:center; line-height:1.6; }
+
+/* HUD: 操作ガイドのピル＋画像カウンタ（上部中央に縦積み）。ドラッグ中は退避 */
+#hud { position:absolute; top:10px; left:0; right:0; z-index:15;
+       display:flex; flex-direction:column; align-items:center; gap:6px;
+       pointer-events:none; transition:opacity .15s; }
+body.dragging #hud { opacity:0; }
+#status { max-width:min(92%, 620px); padding:8px 16px; border-radius:999px;
+          background:rgba(17,18,20,.85); border:1px solid #ffffff2e; color:#fff;
+          font-size:12.5px; font-weight:600; line-height:1.45; text-align:center;
+          backdrop-filter:blur(4px); box-shadow:0 2px 10px #0006; }
+#counter { font-size:11.5px; color:#ddd; background:rgba(17,18,20,.75);
+           border:1px solid #ffffff24; border-radius:999px; padding:4px 10px; }
+
+/* 計測値シートの背面（タップで閉じる） */
+#backdrop { display:none; position:absolute; inset:0; background:#0006; z-index:22; }
+
+/*==================================================================
+  サイドバー（計測値・ランドマーク・定義）
+==================================================================*/
+#sidebar { width:300px; background:var(--panel); padding:14px; overflow:auto; }
+#sidebar section + section { margin-top:18px; }
+#sidebar h3 { margin:0 0 8px; font-size:12.5px; color:#4b4e55; letter-spacing:.02em; }
 .metrics { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.metric { background:#fff; border-radius:8px; padding:10px; text-align:center; box-shadow:0 1px 3px #0002; }
-.metric .k { font-weight:700; font-size:12px; color:#555; }
-.metric .v { font-size:20px; font-weight:700; }
-.note { font-size:11px; color:#666; line-height:1.5; }
-#status { padding:5px 10px; background:#fffbe6; border-top:1px solid #eedc82; font-size:12px;
-          font-weight:600; }
-#help { position:absolute; inset:0; background:#000a; color:#fff; padding:24px; overflow:auto;
-        display:none; font-size:13px; line-height:1.7; }
+.metric { background:#fff; border-radius:10px; padding:10px; text-align:center; box-shadow:0 1px 3px #0002; }
+.metric .k { font-weight:700; font-size:11px; color:#777; }
+.metric .v { font-size:21px; font-weight:700; color:#1c1e21; }
+.note { font-size:11px; color:#666; line-height:1.6; }
+#svaInfo { margin-top:8px; font-size:12px; }
+.note.privacy { margin-top:10px; color:#999; }
+.scalebox { margin-top:10px; padding:8px 10px; border-radius:8px; font-size:12px; }
+
+/* ランドマーク進捗リスト */
+#steps { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
+#steps li { display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:8px;
+            background:#fff; font-size:12.5px; color:#333; border:1.5px solid transparent;
+            box-shadow:0 1px 2px #0001; cursor:pointer; }
+#steps li.todo { cursor:default; color:#6f7278; background:#fbfbfc; box-shadow:none; }
+#steps li.todo .dotc { opacity:.45; }
+#steps li.next { border-color:var(--accent); background:#eaf3fd; }
+#steps li.sel  { border-color:#f0a020; background:#fff6e8; }
+#steps li.ready { color:#333; cursor:pointer; }
+#steps li.ready .st { color:var(--accent); }
+#steps .dotc { width:10px; height:10px; border-radius:50%; border:1px solid #0003; flex:none; }
+#steps .lbl { flex:1; }
+#steps .st { font-size:11px; font-weight:700; color:#999; }
+#steps li.done .st { color:#2e7d32; }
+#steps li.next .st { color:var(--accent); }
+
+/*==================================================================
+  ヘルプオーバーレイ
+==================================================================*/
+#help { position:absolute; inset:0; background:#000c; color:#fff; padding:24px; overflow:auto;
+        display:none; font-size:13px; line-height:1.7; z-index:30; }
 #help.show { display:block; }
-#help h2 { margin-top:0; }
+#help .helpbox { max-width:640px; margin:0 auto; }
+#help h2 { margin:0 0 14px; display:flex; align-items:center; justify-content:space-between; font-size:18px; }
+#help h3 { margin:20px 0 8px; font-size:14px; color:#cfd3d9; }
+#helpClose { background:#ffffff1c; border:0; color:#fff; font-size:15px; width:34px; height:34px;
+             border-radius:8px; cursor:pointer; }
+#help ol.flow { margin:0; padding-left:20px; }
+#help ol.flow li { margin:4px 0; }
 #help kbd { background:#333; border:1px solid #666; border-radius:4px; padding:1px 6px; font-family:monospace; }
 #help table { border-collapse:collapse; }
 #help td { padding:3px 14px 3px 0; vertical-align:top; }
-.scalebox { margin-top:10px; padding:8px; border-radius:6px; font-size:12px; }
+#help .closeHint { color:#9aa0a8; margin-top:18px; }
+
+/*==================================================================
+  ズーム/取消・微調整パッド（タッチ端末のみ表示）
+==================================================================*/
+.touchonly { display:none; }
+#zoomctl { flex-direction:column; gap:8px; position:absolute; left:10px; top:56px; z-index:20; }
+#zoomctl button { width:44px; height:44px; border:1px solid #ffffff26; border-radius:10px;
+                  background:rgba(17,18,20,.72); color:#fff; font-size:19px; line-height:1;
+                  cursor:pointer; backdrop-filter:blur(3px); }
+#zoomctl button:disabled { opacity:.35; }
+#nudgepad { position:absolute; right:10px; bottom:12px; z-index:20;
+            flex-direction:column; align-items:center; gap:4px;
+            background:rgba(17,18,20,.72); border:1px solid #ffffff26; border-radius:12px;
+            padding:8px; backdrop-filter:blur(3px); }
+#nudgeClose { position:absolute; top:-10px; right:-10px; width:28px; height:28px;
+              border:1px solid #ffffff33; border-radius:50%; background:#2c2e33; color:#fff;
+              font-size:12px; line-height:1; cursor:pointer; }
+#nudgeLabel { color:#fff; font-size:10.5px; max-width:110px; overflow:hidden;
+              text-overflow:ellipsis; white-space:nowrap; }
+#nudgepad .pad { display:grid; gap:3px;
+                 grid-template-areas:". u ." "l . r" ". d ."; }
+#nudgepad .pad button { width:36px; height:36px; border:0; border-radius:8px;
+                        background:#ffffff1e; color:#fff; font-size:13px; cursor:pointer; }
+#nudgepad .pad .u { grid-area:u; } #nudgepad .pad .d { grid-area:d; }
+#nudgepad .pad .l { grid-area:l; } #nudgepad .pad .r { grid-area:r; }
+
+/*==================================================================
+  フッター
+==================================================================*/
 #bottomnav { display:none; }
 #footer { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px;
           padding:5px 10px; background:var(--bg); color:#bbb; font-size:11px;
-          border-top:1px solid #333; }
+          border-top:1px solid var(--line); }
 #footer a { color:#7ab7ff; text-decoration:none; }
 #footer a:hover { text-decoration:underline; }
 #footer .research { color:#ffb74d; font-weight:600; }
 #footer .grow { margin-left:auto; }
-#footer #dlLocal { background:var(--accent); color:#fff; padding:3px 9px; border-radius:4px; }
-#footer #dlLocal:hover { background:#1976d2; text-decoration:none; }
-
-/* モバイル専用要素は既定で非表示。デスクトップとロジックは共通。 */
-.mobileonly { display:none; }
-
-/* オンスクリーンのズーム/フィット操作（ホットキー非対応のタッチ端末向け） */
-#zoomctl { flex-direction:column; gap:6px; position:fixed; left:8px; top:84px; z-index:20; }
-#zoomctl button { width:40px; height:40px; border:0; border-radius:8px;
-                  background:#000a; color:#fff; font-size:18px; line-height:1; cursor:pointer; }
-#zoomctl button:disabled { opacity:.35; }
+#footer #dlLocal { background:var(--accent); color:#fff; padding:4px 10px; border-radius:6px; }
+#footer #dlLocal:hover { background:var(--accent-h); text-decoration:none; }
 
 /*==================================================================
-  モバイル（狭幅）レイアウト
-  - ホットキー表示(.hk)を隠す
-  - .nomobile（前/次/記録グループ）をツールバーから非表示
-  - ツールバーは横スクロール1行（縦の作画領域を最大化）
-  - 計測サイドバーは下からの開閉式ボトムシート（ボトムナビで開閉）
-  - ボトムナビに前/記録/次/計測値を固定配置
+  タッチ端末（幅に関わらず）
+  - ホットキー表示・ドラッグ&ドロップ文言を隠す
+  - ズーム/取消ボタン・微調整パッドを表示（ピンチズームはJS対応）
 ==================================================================*/
-@media (max-width:780px){
+@media (hover:none) and (pointer:coarse) {
   .hk { display:none; }
-  .mobileonly { display:inline-block; }
-  #zoomctl.mobileonly { display:flex; }
+  .pconly { display:none; }
+  #zoomctl { display:flex; }
+  #nudgepad.show { display:flex; }
+  /* タッチターゲットを44px以上に。入力は16pxでiOSのフォーカスズームを防ぐ */
+  #toolbar button, .chk { min-height:44px; }
+  #toolbar input[type=text] { font-size:16px; min-height:44px; }
+  #steps li { min-height:44px; }
+}
+
+/*==================================================================
+  狭幅（モバイル）レイアウト
+  - ツールバーは横スクロール1行＋右端フェードで続きを示唆
+  - よく使う操作（スケール/C7/取消）を回転系より先に
+  - 計測サイドバーは下からのボトムシート（ボトムナビで開閉、外タップで閉じる）
+==================================================================*/
+@media (max-width:780px) {
+  .hk { display:none; }
   .nomobile { display:none; }
 
-  #toolbar { flex-wrap:nowrap; overflow-x:auto; gap:4px;
-             padding:5px 6px; padding-top: max(5px, env(safe-area-inset-top));
-             -webkit-overflow-scrolling:touch; }
-  #toolbar > * { flex:0 0 auto; }
-  #toolbar button { padding:7px 9px; }
-  #toolbar #counter { margin-left:4px; }
+  #toolbar { flex-wrap:nowrap; overflow-x:auto; gap:6px;
+             padding:6px 8px; padding-top: max(6px, env(safe-area-inset-top));
+             -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  #toolbar::-webkit-scrollbar { display:none; }
+  .tbside { flex-wrap:nowrap; flex:0 0 auto; }
+  #tbRight { margin-left:0; }
+  #toolbar button { padding:9px 12px; font-size:13px; }
+  #grpMeasure { order:-1; }
+  .toolgroup:has(#btnOpen) { order:-2; }
+  #toolbar input[type=text] { width:130px; }
+  .chk { padding:8px 12px; }
 
-  #bottomnav {
-    display: flex;
-    background: var(--bg);
-    border-top: 1px solid #333;
-    padding: 6px 8px max(6px, env(safe-area-inset-bottom));
-    gap: 6px;
-  }
-  #bottomnav button {
-    flex: 1;
-    padding: 10px 4px;
-    font-size: 13px;
-    border: 0;
-    border-radius: 8px;
-    background: #3a3a3a;
-    color: #fff;
-    cursor: pointer;
-    min-height: 44px;
-  }
+  /* 右端のスクロール示唆フェード */
+  .tbfade { display:flex; align-items:center; justify-content:flex-end;
+            position:sticky; right:0; order:99; flex:0 0 34px; margin-left:-34px;
+            align-self:stretch; pointer-events:none; color:#cfd3d9; font-size:16px;
+            background:linear-gradient(90deg, transparent, var(--bg) 70%);
+            opacity:1; transition:opacity .15s; }
+  #toolbar.scroll-end .tbfade { opacity:0; }
+
+  #status { font-size:12px; padding:7px 13px; }
+  /* 計測値ピルが2行になってもズームボタンと重ならない位置に */
+  #zoomctl { top:128px; }
+
+  #bottomnav { display:flex; background:var(--bg); border-top:1px solid var(--line);
+               padding:8px 10px max(8px, env(safe-area-inset-bottom)); gap:8px; }
+  #bottomnav button { border:0; border-radius:10px; background:var(--bg3); color:#fff;
+                      cursor:pointer; min-height:44px; font-size:14px; white-space:nowrap; }
+  #bottomnav #navPrev, #bottomnav #navNext { flex:0 0 54px; font-size:17px; }
+  #bottomnav #navRecord { flex:1; font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+  #bottomnav #navPanel { flex:0 0 auto; padding:0 14px; }
   #bottomnav button:disabled { opacity:.4; cursor:default; }
-  #bottomnav button:active { opacity:.7; }
-  #bottomnav .accent { background: var(--accent); }
+  #bottomnav button:active:not(:disabled) { opacity:.75; }
+  #bottomnav .accent { background:var(--accent); }
 
-  #sidebar {
-    position:fixed; left:0; right:0;
-    bottom:calc(var(--nav-h) + env(safe-area-inset-bottom, 0px)); width:auto;
-    max-height:62vh; border-radius:12px 12px 0 0;
-    box-shadow:0 -3px 14px #0005;
-    transform:translateY(calc(100% + var(--nav-h) + env(safe-area-inset-bottom, 0px)));
-    transition:transform .25s ease; z-index:25;
-  }
+  /* 計測値パネル → ボトムシート */
+  #sidebar { position:fixed; left:0; right:0;
+             bottom:calc(var(--nav-h) + env(safe-area-inset-bottom, 0px)); width:auto;
+             max-height:62vh; border-radius:14px 14px 0 0;
+             box-shadow:0 -3px 14px #0005;
+             transform:translateY(calc(100% + var(--nav-h) + env(safe-area-inset-bottom, 0px)));
+             transition:transform .25s ease; z-index:25; }
   body.panel-open #sidebar { transform:translateY(0); }
-  #sidebar::before { content:""; display:block; width:42px; height:4px; border-radius:2px;
-                     background:#c4c4c4; margin:0 auto 10px; }
+  body.panel-open #backdrop { display:block; cursor:pointer; }
 
-  #footer { padding: 4px 8px; font-size: 10px; gap: 4px; }
-  #footer a { display: none; }
+  /* パネルを開いている間は微調整パッドを隠す */
+  body.panel-open #nudgepad { display:none; }
+
+  #footer { padding:4px 10px; font-size:10px; gap:4px; flex-wrap:nowrap; min-width:0; }
+  #footer .research { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #footer a { display:none; }
+}
+
+/* デスクトップ中間幅: ホットキー表示を省いて1行に収める（ツールチップとヘルプで参照可能） */
+@media (min-width:781px) and (max-width:1511px) {
+  .hk { display:none; }
+}
+
+/* 高さの低い横向き端末: 余白を詰め、浮動UIをコンパクトに */
+@media (max-height:520px) {
+  #toolbar { padding-top:max(4px, env(safe-area-inset-top)); padding-bottom:4px; }
+  #toolbar button { padding:5px 9px; }
+  #footer { font-size:10px; padding:3px 10px; flex-wrap:nowrap; min-width:0; }
+  #footer .research { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  /* HUDは1行に圧縮（低い画面で画像上部を覆いすぎない） */
+  #hud { top:6px; flex-direction:row; justify-content:center; align-items:center; }
+  #status { max-width:58%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+            font-size:11.5px; padding:5px 12px; }
+  #counter { white-space:nowrap; }
+  /* ズーム類は下辺に横並び（縦積みだと画像を覆いすぎる） */
+  #zoomctl { flex-direction:row; top:auto; bottom:8px; left:8px; }
+  #zoomctl button { width:38px; height:38px; font-size:16px; }
+  #nudgepad { padding:6px; bottom:8px; }
+  #nudgepad .pad button { width:30px; height:30px; font-size:11px; }
+  #nudgeLabel { display:none; }
 }
