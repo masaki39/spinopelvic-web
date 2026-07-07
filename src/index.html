@@ -32,8 +32,6 @@
       </div>
       <div class="toolgroup">
         <button id="btnCsv" title="蓄積した全結果をCSVで保存 (D)">⬇ CSV保存<span class="hk"> (D)</span></button>
-        <label class="chk" title="記録ごとにCSV行と注釈PNGを都度ダウンロード"><input type="checkbox" id="chkPer">1枚ごとDL</label>
-        <label class="chk" title="校正したスケールを次の画像へ引き継ぐ"><input type="checkbox" id="chkScale">スケール維持</label>
       </div>
       <button id="btnHelp" title="ヘルプ (?)">? ヘルプ</button>
     </div>
@@ -78,6 +76,7 @@
         <div class="metrics" id="metrics"></div>
         <div id="svaInfo" class="note"></div>
         <div id="scaleInfo" class="scalebox"></div>
+        <button class="dataonly" id="btnSaveImg" title="補助線と計測値を焼き込んだ画像を保存">🖼 画像保存（計測値付き）</button>
       </section>
       <section>
         <h3>ランドマーク</h3>

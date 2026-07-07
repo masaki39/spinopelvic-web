@@ -15,6 +15,7 @@ export const state = {
   points:{},             // id -> {x,y}
   placedOrder:[],
   radius:60,
+  radiusManual:false,     // 大腿骨頭円半径をユーザーが手動調整済みか（自動推定で上書きしないため）
   active:null,
   placingC7:false,
   scale:{ p1:null, p2:null, realMm:null, pxPerMm:null, setting:0 },
@@ -23,11 +24,9 @@ export const state = {
   rowByIndex:{},          // 画像index -> rows内の位置（同じ画像の重複記録を防ぐ）
   csvSaved:false,         // rows を CSV 保存済みか（離脱警告の抑制に使用）
   dirty:false,            // 未記録の変更があるか
-  keepScale:false,        // バッチでスケール校正を次画像へ維持
   result:null,
   view:{ scale:1, ox:0, oy:0 },
   mouseImg:null,
-  out:{ perImage:false },
 };
 
 //==================================================================

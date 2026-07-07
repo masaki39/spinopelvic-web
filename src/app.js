@@ -1,7 +1,7 @@
 import { state, $, canvas, fileInput } from './state.js';
 import { G } from './geometry.js';
 import { fileStamp, csvEsc, download, deriveId } from './utils.js';
-import { render, fit, zoomAt, toScreen, toImg, canvasBlob } from './render.js';
+import { render, fit, zoomAt, toScreen, toImg, measurementBlob } from './render.js';
 
 // タッチ端末では文言を「タップ」「ボタン名」ベースにする（ホットキーが無いため）
 const TOUCH = matchMedia('(hover: none) and (pointer: coarse)').matches;
@@ -28,14 +28,12 @@ async function loadImage(i){
   if(i<0||i>=state.images.length) return;
   const token=++_loadToken;
   const it=state.images[i];
-  const prevScale = state.keepScale ? {...state.scale} : null;
   const base=await createImageBitmap(it.file);
   if(token!==_loadToken) return;        // 連打で追い越された読み込みは破棄
   state.index=i; state.currentName=it.name; state.base=base;
   state.rotation=0; state.flipH=false;
   buildWorking();
   resetPoints();
-  if(prevScale && prevScale.pxPerMm){ state.scale={...prevScale, setting:0}; recompute(); }
   $('caseId').value = state.caseId = deriveId(it.name);
   fit(); updateUI(); render();
 }
@@ -57,7 +55,7 @@ function buildWorking(){
 }
 
 function resetPoints(){
-  state.points={}; state.placedOrder=[]; state.radius=60;
+  state.points={}; state.placedOrder=[]; state.radius=60; state.radiusManual=false;
   state.active=null; state.placingC7=false; state.result=null; state.dirty=false;
   state.scale={ p1:null, p2:null, realMm:null, pxPerMm:null, setting:0 };
 }
@@ -90,7 +88,7 @@ const labelOf = id => (state.preset.steps.find(s=>s.id===id)||{}).label||id;
 
 function place(id, p){
   state.points[id]=p; state.placedOrder.push(id); state.active=id; state.dirty=true;
-  if(id==='femR'&&state.points.femL){
+  if(id==='femR'&&state.points.femL&&!state.radiusManual){
     const est=G.distance(state.points.femL, state.points.femR)/4;
     state.radius=Math.max(20, Math.min(120, est));
   }
@@ -126,12 +124,6 @@ async function recordAndNext(){
   if(pos!==undefined){ state.rows[pos]=row; }          // 同じ画像の再記録は置換
   else { state.rowByIndex[state.index]=state.rows.length; state.rows.push(row); }
   state.dirty=false; state.csvSaved=false;
-  const base=(state.caseId||state.currentName||'case').replace(/[\\/:*?"<>| ]/g,'_');
-
-  if(state.out.perImage){
-    download(csvBlob([row]), base+'.csv');
-    download(await canvasBlob(), base+'.png');
-  }
 
   if(state.index < state.images.length-1){
     loadImage(state.index+1);
@@ -157,6 +149,12 @@ function saveCsv(){
   download(csvBlob(state.rows), `spinopelvic_batch_${fileStamp()}.csv`);
   state.csvSaved=true;
 }
+async function saveMeasurementImage(){
+  if(!state.bitmap) return;
+  if(!state.result){ setStatus('計測値がありません（ランドマークを配置してください）', 4000); return; }
+  const base=(state.caseId||state.currentName||'case').replace(/[\\/:*?"<>| ]/g,'_');
+  download(await measurementBlob(), `${base}_measured.png`);
+}
 
 //==================================================================
 // ヒットテスト・ポインタ操作
@@ -179,8 +177,8 @@ function applyDrag(hit, ip){
   state.dirty=true;
   switch(hit.type){
     case 'point': P[hit.id]=ip; state.active=hit.id; break;
-    case 'radiusL': if(P.femL) state.radius=Math.max(10,G.distance(ip,P.femL)); break;
-    case 'radiusR': if(P.femR) state.radius=Math.max(10,G.distance(ip,P.femR)); break;
+    case 'radiusL': if(P.femL){ state.radius=Math.max(10,G.distance(ip,P.femL)); state.radiusManual=true; } break;
+    case 'radiusR': if(P.femR){ state.radius=Math.max(10,G.distance(ip,P.femR)); state.radiusManual=true; } break;
     case 'scale1': sc.p1=ip; recalcScale(); break;
     case 'scale2': sc.p2=ip; recalcScale(); break;
   }
@@ -192,7 +190,7 @@ function dragSnapshot(hit){
   const P=state.points, sc=state.scale;
   switch(hit.type){
     case 'point': return {p:{...P[hit.id]}};
-    case 'radiusL': case 'radiusR': return {r:state.radius};
+    case 'radiusL': case 'radiusR': return {r:state.radius, manual:state.radiusManual};
     case 'scale1': return {p:sc.p1&&{...sc.p1}, mm:sc.pxPerMm};
     case 'scale2': return {p:sc.p2&&{...sc.p2}, mm:sc.pxPerMm};
     default: return null;
@@ -203,7 +201,7 @@ function dragRollback(hit, snap){
   const P=state.points, sc=state.scale;
   switch(hit.type){
     case 'point': P[hit.id]=snap.p; break;
-    case 'radiusL': case 'radiusR': state.radius=snap.r; break;
+    case 'radiusL': case 'radiusR': state.radius=snap.r; state.radiusManual=snap.manual; break;
     case 'scale1': sc.p1=snap.p; sc.pxPerMm=snap.mm; break;
     case 'scale2': sc.p2=snap.p; sc.pxPerMm=snap.mm; break;
   }
@@ -557,6 +555,7 @@ $('btnRecord').onclick=recordAndNext;
 $('btnPrev').onclick=()=>navTo(state.index-1);
 $('btnNext').onclick=()=>navTo(state.index+1);
 $('btnCsv').onclick=saveCsv;
+$('btnSaveImg').onclick=saveMeasurementImage;
 $('btnHelp').onclick=toggleHelp;
 // モバイル: 計測値ボトムシートの開閉
 function togglePanel(){
@@ -604,8 +603,6 @@ $('steps').addEventListener('click', e=>{
   window.addEventListener('resize', updTb);
   updTb();
 }
-$('chkPer').onchange=e=>state.out.perImage=e.target.checked;
-$('chkScale').onchange=e=>state.keepScale=e.target.checked;
 $('caseId').oninput=e=>state.caseId=e.target.value;
 
 // ドラッグ&ドロップ

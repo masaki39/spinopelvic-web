@@ -45,23 +45,59 @@ export function render(){
   drawLoupe(ctx, cw);
 }
 
-// 画像解像度でのレンダリング（PNG出力用）。高解像度X線でも注釈が読めるよう
-// 画像サイズに応じて線幅・点・文字を拡大する。
-export function renderToImageCanvas(){
+// 計測値付き保存用（#11）: 点の名称ラベルとアクティブ点ハイライトを省き、
+// 右下に計測値パネルを焼き込む。高解像度X線でも読めるよう画像サイズに応じて拡大する。
+export function renderMeasurementCanvas(){
   const c=document.createElement('canvas'); c.width=state.imgW; c.height=state.imgH;
   const x=c.getContext('2d');
   x.drawImage(state.bitmap,0,0);
   const k=Math.max(1, Math.min(state.imgW,state.imgH)/1100);
-  paintOverlay(x, p=>({x:p.x,y:p.y}), 1, 2*k, k);
+  paintOverlay(x, p=>({x:p.x,y:p.y}), 1, 2*k, k, {showLabels:false, showActive:false});
+  drawMetricsPanel(x, k);
   return x.canvas;
 }
 
-export function canvasBlob(){
-  return new Promise(res=>renderToImageCanvas().toBlob(res,'image/png'));
+export function measurementBlob(){
+  return new Promise(res=>renderMeasurementCanvas().toBlob(res,'image/png'));
+}
+
+function drawMetricsPanel(g, k){
+  const res=state.result; if(!res) return;
+  const items=state.preset.metrics.map(mt=>{
+    const v=res[mt.key];
+    return `${mt.key} ${v!=null? v.toFixed(1):'-'}${mt.unit}`;
+  });
+  if(res.svaMm!=null) items.push(`SVA ${res.svaMm.toFixed(1)}mm`);
+  else if(res.svaPx!=null) items.push(`SVA ${res.svaPx.toFixed(1)}px`);
+  if(!items.length) return;
+
+  const fontSize=24*k, pad=16*k, lineGap=8*k, margin=18*k;
+  g.font=`700 ${fontSize}px system-ui`;
+  g.textBaseline='top';
+  const boxW=Math.max(...items.map(t=>g.measureText(t).width))+pad*2;
+  const boxH=items.length*fontSize+(items.length-1)*lineGap+pad*2;
+  const x0=g.canvas.width-boxW-margin, y0=g.canvas.height-boxH-margin;
+
+  g.fillStyle='rgba(0,0,0,.68)';
+  roundRect(g,x0,y0,boxW,boxH,10*k); g.fill();
+  g.fillStyle='#fff';
+  items.forEach((t,i)=>g.fillText(t, x0+pad, y0+pad+i*(fontSize+lineGap)));
+}
+
+function roundRect(g,x,y,w,h,r){
+  g.beginPath();
+  g.moveTo(x+r,y);
+  g.arcTo(x+w,y,x+w,y+h,r);
+  g.arcTo(x+w,y+h,x,y+h,r);
+  g.arcTo(x,y+h,x,y,r);
+  g.arcTo(x,y,x+w,y,r);
+  g.closePath();
 }
 
 // map: 画像座標→描画座標、ds: 画像長さの倍率、lw: 線幅、k: UI要素（点・文字）の倍率
-function paintOverlay(g, map, ds, lw, k=1){
+// opts.showLabels: 点の名称ラベル、opts.showActive: アクティブ点ハイライト（#11: 計測値付き保存では両方非表示）
+function paintOverlay(g, map, ds, lw, k=1, opts={}){
+  const {showLabels=true, showActive=true}=opts;
   const P=state.points, res=state.result, sc=state.scale;
   const line=(a,b,color,w)=>{ g.strokeStyle=color; g.lineWidth=w?w*k:lw; const A=map(a),B=map(b);
     g.beginPath(); g.moveTo(A.x,A.y); g.lineTo(B.x,B.y); g.stroke(); };
@@ -70,7 +106,7 @@ function paintOverlay(g, map, ds, lw, k=1){
     g.beginPath(); g.arc(c.x,c.y,r,0,7); g.stroke(); };
   const cross=(p,color)=>{ const c=map(p); g.strokeStyle=color; g.lineWidth=lw;
     g.beginPath(); g.moveTo(c.x-8*k,c.y); g.lineTo(c.x+8*k,c.y); g.moveTo(c.x,c.y-8*k); g.lineTo(c.x,c.y+8*k); g.stroke(); };
-  const label=(p,t,color,dx=8,dy=-8)=>{ const c=map(p); dx*=k; dy*=k;
+  const label=(p,t,color,dx=8,dy=-8)=>{ if(!showLabels) return; const c=map(p); dx*=k; dy*=k;
     g.font=`${12*k}px system-ui`; g.textBaseline='bottom';
     const w=g.measureText(t).width; g.fillStyle='rgba(0,0,0,.65)'; g.fillRect(c.x+dx-2*k,c.y+dy-12*k,w+4*k,15*k);
     g.fillStyle=color; g.fillText(t,c.x+dx,c.y+dy); };
@@ -124,9 +160,11 @@ function paintOverlay(g, map, ds, lw, k=1){
 
   // 計測補助線
   if(res){
-    // s1Mid dot + S1 normal: s1a+s1p で解放
+    // s1Mid dot + S1 normal: s1a+s1p で解放。長さはS1-大腿骨頭軸の長さに連動させ、
+    // 画像サイズに関わらず見た目の比率が一定になるようにする
     dot(res.s1Mid,5,'#fff');
-    const end={x:res.s1Mid.x+res.s1Normal.x*180*k, y:res.s1Mid.y+res.s1Normal.y*180*k};
+    const normalLen = res.hipAxis ? G.distance(res.s1Mid,res.hipAxis) : 180*k;
+    const end={x:res.s1Mid.x+res.s1Normal.x*normalLen, y:res.s1Mid.y+res.s1Normal.y*normalLen};
     line(res.s1Mid,end,'#fff',2);
 
     // hipAxis + PT line: femL+femR 追加後に解放
@@ -144,7 +182,7 @@ function paintOverlay(g, map, ds, lw, k=1){
   }
 
   // アクティブ点ハイライト
-  if(state.active&&P[state.active]) ring(P[state.active], 11*k, '#fff', 2);
+  if(showActive && state.active&&P[state.active]) ring(P[state.active], 11*k, '#fff', 2);
 }
 
 function dashed(g,map,a,b,color,w,k=1){

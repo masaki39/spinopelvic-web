@@ -8,7 +8,7 @@
 * { box-sizing: border-box; }
 html, body { margin:0; height:100%; font-family: system-ui, "Hiragino Sans", sans-serif; }
 body { display:flex; flex-direction:column; height:100vh; height:100dvh; overflow:hidden; background:var(--bg); }
-button { touch-action:manipulation; font-family:inherit; }
+button { touch-action:manipulation; font-family:inherit; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
 :focus-visible { outline:2px solid var(--accent-h); outline-offset:1px; }
 
 /*==================================================================
@@ -41,11 +41,6 @@ button { touch-action:manipulation; font-family:inherit; }
 #toolbar input[type=text] { font-size:12.5px; padding:6px 8px; border-radius:6px; border:1px solid #4a4d52;
                             background:var(--bg2); color:var(--txt); width:92px; }
 #toolbar input[type=text]:focus { border-color:var(--accent-h); outline:none; }
-.chk { font-size:12px; display:flex; align-items:center; gap:5px; color:var(--txt);
-       background:var(--bg); border:1px solid #4a4d52; border-radius:999px;
-       padding:4px 9px; cursor:pointer; white-space:nowrap; user-select:none; }
-.chk input { accent-color:var(--accent); margin:0; }
-.chk:has(input:checked) { border-color:var(--accent-h); background:#1c3556; }
 .tbfade { display:none; }
 
 /*==================================================================
@@ -95,6 +90,10 @@ body.dragging #hud { opacity:0; }
 #svaInfo { margin-top:8px; font-size:12px; }
 .note.privacy { margin-top:10px; color:#999; }
 .scalebox { margin-top:10px; padding:8px 10px; border-radius:8px; font-size:12px; }
+#btnSaveImg { margin-top:10px; width:100%; padding:10px; border:0; border-radius:8px;
+              background:var(--accent); color:#fff; font-size:13px; font-weight:600; cursor:pointer; }
+#btnSaveImg:hover { background:var(--accent-h); }
+#btnSaveImg:disabled { opacity:.4; cursor:default; }
 
 /* ランドマーク進捗リスト */
 #steps { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
@@ -181,7 +180,7 @@ body.dragging #hud { opacity:0; }
   #zoomctl { display:flex; }
   #nudgepad.show { display:flex; }
   /* タッチターゲットを44px以上に。入力は16pxでiOSのフォーカスズームを防ぐ */
-  #toolbar button, .chk { min-height:44px; }
+  #toolbar button { min-height:44px; }
   #toolbar input[type=text] { font-size:16px; min-height:44px; }
   #steps li { min-height:44px; }
 }
@@ -206,7 +205,6 @@ body.dragging #hud { opacity:0; }
   #grpMeasure { order:-1; }
   .toolgroup:has(#btnOpen) { order:-2; }
   #toolbar input[type=text] { width:130px; }
-  .chk { padding:8px 12px; }
 
   /* 右端のスクロール示唆フェード */
   .tbfade { display:flex; align-items:center; justify-content:flex-end;
