@@ -153,6 +153,11 @@ export const CERVICAL = {
   ],
   extras:[
     {id:'scale', label:'📏 スケール', cls:'orange', title:'基準線2点と実長でスケール校正 (S)'},
+    // AI自動計測: 現行モデルは同意取得(オプトアウト)前の患者データで学習したため無効化中。
+    // 倫理委員会でオプトアウト取得済みのデータで再学習後、モデル一式(cervical_best.onnx /
+    // cervical_best.onnx.data / onnxruntime-webのWASM一式)を apps/cervical/model/ に置き、
+    // 下の1行を有効化するだけで再度使えるようになる（推論ロジックは src/cervical-ai.js に実装済み）。
+    // {id:'aiDetect', label:'🤖 自動計測', cls:'ai', title:'AIモデルで頚椎8点を自動配置（オンライン版のみ）'},
   ],
   // C2下終板(c2a/c2p)から「前方向」を導出し、左右反転しても一貫した符号になるようにする
   // （SPINOPELVICのS1と同じ考え方）。C2C7_angle = incl(C2) - incl(C7下終板)（前弯=正）、

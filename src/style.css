@@ -101,6 +101,7 @@ body.dragging #hud { opacity:0; }
 .extras button:disabled { opacity:.4; cursor:default; }
 .extras button.orange { color:var(--orange); border-color:#f0c090; }
 .extras button.teal { color:var(--teal); border-color:#9fd6cd; }
+.extras button.ai { color:var(--teal); border-color:#9fd6cd; }
 .extras button.modeon { background:var(--accent); color:#fff; border-color:var(--accent); }
 .extras button.modeon:hover { background:var(--accent-h); }
 

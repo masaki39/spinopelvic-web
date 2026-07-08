@@ -2,6 +2,7 @@ import { state, $, canvas, fileInput } from './state.js';
 import { G } from './geometry.js';
 import { fileStamp, csvEsc, download, deriveId } from './utils.js';
 import { render, fit, zoomAt, toScreen, toImg, measurementBlob } from './render.js';
+import { detectCervicalLandmarks } from './cervical-ai.js';
 
 // タッチ端末では文言を「タップ」「ボタン名」ベースにする（ホットキーが無いため）
 const TOUCH = matchMedia('(hover: none) and (pointer: coarse)').matches;
@@ -382,6 +383,39 @@ function startScale(){
   recompute(); setStatus(`スケール: 基準線の始点を${TAP}（もう一度押すと中止）`); updateUI(); render();
 }
 
+// AIモデルで頚椎8点を自動配置（オンライン版のみ。ローカル単体HTMLではモデルが
+// 同梱されないため fetch が失敗し、その場合はエラー表示のみで他機能には影響しない）
+let aiBusy=false;
+async function autoDetect(){
+  if(!state.bitmap || aiBusy) return;
+  aiBusy=true;
+  const btn=document.getElementById('extra-aiDetect');
+  const label=btn?.querySelector('.bl');
+  const prevLabel=label?.textContent;
+  if(btn) btn.disabled=true;
+  if(label) label.textContent='⏳ 解析中…';
+  setStatus('AIで頚椎8点を自動配置中…（初回はモデル読込のため時間がかかります）');
+  try{
+    const detected=await detectCervicalLandmarks(state.bitmap, state.imgW, state.imgH);
+    state.placingC7=false;
+    for(const [id,p] of Object.entries(detected)){
+      if(!state.placedOrder.includes(id)) state.placedOrder.push(id);
+      state.points[id]=p;
+    }
+    state.active=null; state.dirty=true;
+    recompute();
+    setStatus('AIで自動配置しました。点はドラッグ/矢印キーで微調整できます。', 6000);
+  }catch(err){
+    console.error(err);
+    setStatus('自動計測は利用できません（オンライン版でのみ利用可能です）', 6000);
+  }finally{
+    aiBusy=false;
+    if(btn) btn.disabled=!state.bitmap;
+    if(label) label.textContent=prevLabel;
+    updateUI(); render();
+  }
+}
+
 //==================================================================
 // 計測値メニュー（プリセット固有の追加操作。共通ツールバーには置かない）
 //==================================================================
@@ -390,6 +424,7 @@ function startScale(){
 const EXTRA_ACTIONS = {
   scale:{ run:startScale, on:()=>state.scale.setting>0 },
   c7:{ run:startC7, on:()=>state.placingC7 },
+  aiDetect:{ run:autoDetect, on:()=>false },
 };
 const extrasOf = ()=> state.preset.extras||[];
 function hasExtra(id){ return extrasOf().some(x=>x.id===id); }
