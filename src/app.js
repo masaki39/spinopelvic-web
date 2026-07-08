@@ -334,8 +334,8 @@ window.addEventListener('keydown', e=>{
     case 'R': rotate(-90); break;
     case 'f': case 'F': flip(); break;
     case 'z': case 'Z': case 'Backspace': e.preventDefault(); undo(); break;
-    case 'c': case 'C': startC7(); break;
-    case 's': case 'S': startScale(); break;
+    case 'c': case 'C': if(hasExtra('c7')) startC7(); break;
+    case 's': case 'S': if(hasExtra('scale')) startScale(); break;
     case 'Enter': case 'e': case 'E': e.preventDefault(); recordAndNext(); break;
     case 'n': case 'N': navTo(state.index+1); break;
     case 'p': case 'P': navTo(state.index-1); break;
@@ -378,6 +378,27 @@ function startScale(){
   }
   state.scale={ p1:null,p2:null,realMm:null,pxPerMm:null, setting:1 };
   recompute(); setStatus(`スケール: 基準線の始点を${TAP}（もう一度押すと中止）`); updateUI(); render();
+}
+
+//==================================================================
+// 計測値メニュー（プリセット固有の追加操作。共通ツールバーには置かない）
+//==================================================================
+// プリセットの extras（preset.js）を id で実際の挙動に紐付けるレジストリ。
+// 新しいプリセットが別の extras を宣言しても、この対応表を増やすだけでよい。
+const EXTRA_ACTIONS = {
+  scale:{ run:startScale, on:()=>state.scale.setting>0 },
+  c7:{ run:startC7, on:()=>state.placingC7 },
+};
+const extrasOf = ()=> state.preset.extras||[];
+function hasExtra(id){ return extrasOf().some(x=>x.id===id); }
+function renderExtras(){
+  const el=$('extras'); if(!el) return;
+  el.innerHTML = extrasOf().map(x=>
+    `<button class="dataonly ${x.cls||''}" id="extra-${x.id}" title="${x.title||x.label}"><span class="bl">${x.label}</span></button>`
+  ).join('');
+  for(const x of extrasOf()){
+    document.getElementById(`extra-${x.id}`).onclick = ()=>EXTRA_ACTIONS[x.id]?.run();
+  }
 }
 
 //==================================================================
@@ -431,12 +452,13 @@ function updateUI(){
   else { sb.style.background='#eee'; sb.style.border='1px solid #ccc';
     sb.innerHTML='📏 スケール未校正（SVAはpx表示）'; }
 
-  // スケール/C7ボタン: モード中は「中止」に切替
-  const scOn=sc.setting>0, c7On=state.placingC7;
-  $('btnScale').classList.toggle('modeon', scOn);
-  $('btnScale').querySelector('.bl').textContent = scOn ? '✕ 中止' : '📏 スケール';
-  $('btnC7').classList.toggle('modeon', c7On);
-  $('btnC7').querySelector('.bl').textContent = c7On ? '✕ 中止' : 'C7 / SVA';
+  // 計測値メニューの追加操作ボタン: モード中は「中止」に切替
+  for(const x of extrasOf()){
+    const btn=document.getElementById(`extra-${x.id}`); if(!btn) continue;
+    const on = !!EXTRA_ACTIONS[x.id]?.on();
+    btn.classList.toggle('modeon', on);
+    btn.querySelector('.bl').textContent = on ? '✕ 中止' : x.label;
+  }
 
   // ステータス（校正中・一時メッセージ表示中でなければ）
   if(Date.now()<statusHoldUntil){
@@ -548,8 +570,7 @@ fileInput.onchange=e=>{ if(e.target.files.length) setFiles(e.target.files); };
 $('btnRotL').onclick=()=>rotate(-90);
 $('btnRotR').onclick=()=>rotate(90);
 $('btnFlip').onclick=flip;
-$('btnScale').onclick=startScale;
-$('btnC7').onclick=startC7;
+renderExtras();
 $('btnUndo').onclick=undo;
 $('btnRecord').onclick=recordAndNext;
 $('btnPrev').onclick=()=>navTo(state.index-1);

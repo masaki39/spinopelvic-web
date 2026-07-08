@@ -1,15 +1,16 @@
-# Spinopelvic Analyzer (Web)
+# Spine Analyzer Tools
 
-Spinopelvic parameters (**PI / PT / SS / LL / SVA**) を計測するローカルWebアプリ。
-単一の `index.html` だけで動作し、**ダウンロードしてダブルクリックで起動**できます。
-画像は端末外に送信されず、すべてブラウザ内で処理されます（Research use only）。
+脊椎X線画像から計測値を算出するローカルWebアプリ集。`index.html` がホームページで、
+各計測アプリ（現在は **Spinopelvic Analyzer**: PI / PT / SS / LL / SVA）へのリンクを掲載します。
+**ダウンロードしてダブルクリックで起動**でき、画像は端末外に送信されず、
+すべてブラウザ内で処理されます（Research use only）。
 
 **🔗 オンライン版: https://masaki39.net/spinopelvic-web/**
 （ブラウザ上で開いても画像はアップロードされず、端末内でのみ処理されます）
 
-## 使い方
+## 使い方（Spinopelvic Analyzer）
 
-1. `index.html` をダブルクリックして開く（Google Chrome 推奨）。
+1. `index.html`（ホーム）から「Spinopelvic Analyzer」を開くか、`spinopelvic/index.html` を直接ダブルクリックして開く（Google Chrome 推奨）。
 2. **画像を開く (O)** で X 線画像を選択（複数選択・フォルダのドラッグ&ドロップ可）。
 3. 表示される指示に従い、クリックでランドマークを配置：
    左大腿骨頭中心 → 右大腿骨頭中心 → S1前/後縁 → L1前/後縁。
@@ -71,28 +72,47 @@ common_femoral_radius, S1/L1/C7 の anterior/posterior x/y`（旧 Flutter 版と
 
 ## 開発（ソースの分割管理 / ビルド）
 
-ソースは [Vite](https://vite.dev/) で `src/` 配下に分割管理し、配布用に
-**単一の `index.html`** へインライン化してビルドします（[vite-plugin-singlefile](https://github.com/richardtallent/vite-plugin-singlefile)）。
+ソースは [Vite](https://vite.dev/) で `src/` 配下に**マルチページ**として分割管理し、
+ページごとに配布用の単一HTMLへインライン化してビルドします
+（[vite-plugin-singlefile](https://github.com/richardtallent/vite-plugin-singlefile)）。
+`src/index.html` がホーム、`src/<アプリ名>/index.html` が各計測アプリのエントリです。
 
 ```bash
 pnpm install      # 依存をインストール
-pnpm dev      # 開発サーバ（HMR）
-pnpm build    # src/ をビルドし、単一ファイルをリポジトリ直下の index.html に出力
+pnpm dev      # 開発サーバ（HMR）。 / がホーム、/spinopelvic/ がアプリ
+pnpm build    # 各ページをビルドし、単一ファイルをリポジトリ直下にコピー
+              # (index.html=ホーム, spinopelvic/index.html=Spinopelvic Analyzer)
 ```
 
 | ファイル | 役割 |
 |---|---|
-| `src/index.html` | 画面のマークアップ（テンプレート） |
-| `src/style.css` | スタイル |
+| `src/index.html` | ホームページ（アプリ一覧・案内） |
+| `src/home.js` / `src/home.css` | ホームページのエントリ / 専用スタイル |
+| `src/spinopelvic/index.html` | Spinopelvic Analyzer の画面マークアップ |
+| `src/style.css` | 計測アプリ共通のスタイル |
 | `src/geometry.js` | 幾何ユーティリティ（純粋関数） |
-| `src/preset.js` | 計測定義（ランドマーク・計測式・CSV スキーマ） |
+| `src/preset.js` | 計測定義（ランドマーク・計測式・CSV スキーマ・計測値メニューの追加操作） |
 | `src/state.js` | アプリ状態と DOM 参照 |
 | `src/render.js` | キャンバス描画・ビュー変換 |
 | `src/app.js` | 画像入出力・計測・UI・イベント配線 |
-| `src/main.js` | エントリ（CSS と app を読み込む） |
+| `src/main.js` | 計測アプリのエントリ（CSS と app を読み込む） |
 
-ビルド成果物のルート `index.html` が、GitHub Pages 配信物・ローカル配布物・
-「ローカル版ダウンロード」の実体を兼ねます。`pnpm build` 後にコミットしてください。
+ビルド成果物のルート `index.html`（ホーム）・`spinopelvic/index.html`（アプリ）が、
+GitHub Pages 配信物・ローカル配布物・「ローカル版ダウンロード」の実体を兼ねます。
+`pnpm build` 後、両方のファイルをコミットしてください。
+
+### 新しい計測アプリを追加するには
+
+1. `src/<アプリ名>/index.html` を作成（`src/spinopelvic/index.html` を雛形に、`#extras` の
+   コンテナと `<script type="module" src="/main.js">` を含める）。
+2. `src/preset.js` に新しいプリセット（ランドマーク・計測式・CSV列・`extras`）を追加。
+3. `vite.config.js` の `PAGES` にエントリを追加し、`package.json` の `build` スクリプトへ
+   ビルド呼び出しとコピーを追加。
+4. `src/index.html`（ホーム）の `.apps` にリンクカードを追加。
+
+なお `src/render.js` の描画ロジック（大腿骨頭・S1/L1など）は現状 Spinopelvic 固有の
+幾何計算です。2つ目のプリセットを追加する際は、必要な範囲でプリセット側に描画定義を
+持たせる形へ拡張してください。
 
 ## ライセンス / 謝辞
 

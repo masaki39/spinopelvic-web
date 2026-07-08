@@ -21,6 +21,12 @@ export const SPINOPELVIC = {
     {key:'PI', unit:'°'}, {key:'PT', unit:'°'},
     {key:'SS', unit:'°'}, {key:'LL', unit:'°'},
   ],
+  // この計測固有の追加操作（共通ツールバーには置かず、計測値メニューに表示する）。
+  // hotkey はグローバルキー配線側でこのプリセットが持つ場合のみ有効になる。
+  extras:[
+    {id:'scale', label:'📏 スケール', cls:'orange', title:'基準線2点と実長でスケール校正 (S)'},
+    {id:'c7',    label:'C7 / SVA',   cls:'teal',   title:'C7前/後縁を配置してSVAを計測 (C)'},
+  ],
   // 計測値は符号付き。前後ランドマーク(s1a/s1p, l1a/l1p)から「前方向」を導出するため、
   // 画像の左右反転に依存せず一貫した正負が得られる（絶対値による符号の喪失を解消）。
   compute(P, pxPerMm){

@@ -90,6 +90,18 @@ body.dragging #hud { opacity:0; }
 #svaInfo { margin-top:8px; font-size:12px; }
 .note.privacy { margin-top:10px; color:#999; }
 .scalebox { margin-top:10px; padding:8px 10px; border-radius:8px; font-size:12px; }
+
+/* 計測値メニュー: プリセット固有の追加操作（preset.extras から動的生成） */
+.extras { display:flex; gap:8px; margin-top:10px; }
+.extras button { flex:1; padding:9px 8px; border:1.5px solid #ddd; border-radius:8px;
+                 background:#fff; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; }
+.extras button:hover { background:#f5f5f5; }
+.extras button:disabled { opacity:.4; cursor:default; }
+.extras button.orange { color:var(--orange); border-color:#f0c090; }
+.extras button.teal { color:var(--teal); border-color:#9fd6cd; }
+.extras button.modeon { background:var(--accent); color:#fff; border-color:var(--accent); }
+.extras button.modeon:hover { background:var(--accent-h); }
+
 #btnSaveImg { margin-top:10px; width:100%; padding:10px; border:0; border-radius:8px;
               background:var(--accent); color:#fff; font-size:13px; font-weight:600; cursor:pointer; }
 #btnSaveImg:hover { background:var(--accent-h); }
@@ -202,7 +214,6 @@ body.dragging #hud { opacity:0; }
   .tbside { flex-wrap:nowrap; flex:0 0 auto; }
   #tbRight { margin-left:0; }
   #toolbar button { padding:9px 12px; font-size:13px; }
-  #grpMeasure { order:-1; }
   .toolgroup:has(#btnOpen) { order:-2; }
   #toolbar input[type=text] { width:130px; }
 

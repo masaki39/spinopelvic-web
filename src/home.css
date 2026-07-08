@@ -1,0 +1,29 @@
+:root {
+  --bg:#1b1d20; --bg2:#26282c; --bg3:#3a3d42; --line:#3d4046;
+  --txt:#e9e9eb; --dim:#a2a5aa;
+  --accent:#1e6fd0; --accent-h:#2f81e2;
+}
+* { box-sizing: border-box; }
+html, body { margin:0; min-height:100%; font-family: system-ui, "Hiragino Sans", sans-serif; }
+body { display:flex; flex-direction:column; min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--txt); }
+:focus-visible { outline:2px solid var(--accent-h); outline-offset:1px; }
+
+#home { flex:1; max-width:720px; width:100%; margin:0 auto; padding:48px 20px 32px; }
+#home h1 { font-size:26px; margin:0 0 8px; }
+#home .lead { color:var(--dim); line-height:1.7; margin:0 0 32px; }
+
+.apps { display:flex; flex-direction:column; gap:14px; }
+.appcard { display:block; background:var(--bg2); border:1px solid var(--line); border-radius:12px;
+           padding:18px 20px; text-decoration:none; color:var(--txt); transition:background .12s, border-color .12s; }
+.appcard:hover { background:var(--bg3); border-color:var(--accent); }
+.appcard h2 { font-size:17px; margin:0 0 6px; }
+.appcard p { font-size:13.5px; color:var(--dim); line-height:1.6; margin:0 0 10px; }
+.appcard .cta { font-size:13px; color:#7ab7ff; font-weight:600; }
+
+#home .note { font-size:11px; color:#666; margin-top:32px; }
+
+#footer { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px;
+          padding:10px 16px; background:var(--bg2); border-top:1px solid var(--line); font-size:12px; }
+#footer a { color:#7ab7ff; text-decoration:none; }
+#footer a:hover { text-decoration:underline; }
+#footer .research { color:#ffb74d; font-weight:600; }

@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && cp dist/index.html index.html",
+    "build": "rm -rf dist && PAGE=home vite build && PAGE=spinopelvic vite build && cp dist/index.html index.html && mkdir -p spinopelvic && cp dist/spinopelvic/index.html spinopelvic/index.html",
     "preview": "vite preview"
   },
   "devDependencies": {
