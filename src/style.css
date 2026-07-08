@@ -37,6 +37,10 @@ button { touch-action:manipulation; font-family:inherit; user-select:none; -webk
 #toolbar button.modeon:hover { background:var(--accent-h); }
 #toolbar .hk { color:#9aa0a8; font-size:11px; }
 #toolbar .accent .hk { color:#cfe2f7; }
+.tbhome { display:inline-flex; align-items:center; font-size:12.5px; padding:8px 12px;
+          border-radius:6px; background:var(--bg2); color:var(--txt); text-decoration:none;
+          white-space:nowrap; transition:background .12s; }
+.tbhome:hover { background:var(--bg3); }
 .idlabel { font-size:12px; display:flex; align-items:center; gap:6px; color:var(--dim); }
 #toolbar input[type=text] { font-size:12.5px; padding:6px 8px; border-radius:6px; border:1px solid #4a4d52;
                             background:var(--bg2); color:var(--txt); width:92px; }
@@ -218,6 +222,7 @@ body.dragging #hud { opacity:0; }
   #tbRight { margin-left:0; }
   #toolbar button { padding:9px 12px; font-size:13px; }
   .toolgroup:has(#btnOpen) { order:-2; }
+  #btnHome { order:-3; padding:9px 12px; font-size:13px; }
   #toolbar input[type=text] { width:130px; }
 
   /* 右端のスクロール示唆フェード */
