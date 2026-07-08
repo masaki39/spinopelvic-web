@@ -4,7 +4,7 @@
 各計測アプリへのリンクを掲載します。**ダウンロードしてダブルクリックで起動**でき、
 画像は端末外に送信されず、すべてブラウザ内で処理されます（Research use only）。
 
-**🔗 オンライン版: https://masaki39.net/spinopelvic-web/**
+**🔗 オンライン版: https://masaki39.net/spine-web/**
 （ブラウザ上で開いても画像はアップロードされず、端末内でのみ処理されます）
 
 ## アプリ一覧
@@ -13,11 +13,6 @@
 |---|---|---|
 | **Spinopelvic Analyzer** | `apps/spinopelvic/` | PI / PT / SS / LL / SVA |
 | **Cervical Analyzer** | `apps/cervical/` | C2C7_angle / T1S / SVA |
-
-Cervical Analyzer のランドマーク定義は
-[masaki39/spine-measure-assist](https://github.com/masaki39/spine-measure-assist) の
-`CervicalMeasureAssist`（C2椎体中心・C2/C7下終板・C7上後隅角・T1上終板）に準拠しています
-（計算式自体はこのアプリの左右反転不変の流儀で実装）。
 
 ## 使い方（共通の流れ）
 
