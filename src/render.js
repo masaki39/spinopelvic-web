@@ -103,6 +103,9 @@ function roundRect(g,x,y,w,h,r){
 function paintOverlay(g, map, ds, lw, k=1, opts={}){
   const {showLabels=true, showActive=true}=opts;
   const P=state.points, res=state.result, sc=state.scale;
+  // ラベル密集対策: 全点常時表示だとランドマークが密な画像で文字が埋め尽くすため、
+  // 選択中(active)とマウスホバー中の点だけラベルを出す
+  const hoverId = showLabels && state.mouseImg ? nearestStepId(map, state.mouseImg, 14) : null;
   const line=(a,b,color,w)=>{ g.strokeStyle=color; g.lineWidth=w?w*k:lw; const A=map(a),B=map(b);
     g.beginPath(); g.moveTo(A.x,A.y); g.lineTo(B.x,B.y); g.stroke(); };
   const dot=(p,r,color)=>{ const c=map(p); g.fillStyle=color; g.beginPath(); g.arc(c.x,c.y,r*k,0,7); g.fill(); };
@@ -136,7 +139,8 @@ function paintOverlay(g, map, ds, lw, k=1, opts={}){
       const handle={x:p.x+state.radius, y:p.y};
       dot(handle,6,'#fff'); ring(handle,6*k,'#4caf50',1.5);
     }else{
-      dot(p,6,s.color); label(p,s.label,s.color);
+      dot(p,6,s.color);
+      if(s.id===state.active || s.id===hoverId) label(p,s.label,s.color);
     }
   }
 
@@ -175,6 +179,17 @@ function paintOverlay(g, map, ds, lw, k=1, opts={}){
 
   // アクティブ点ハイライト
   if(showActive && state.active&&P[state.active]) ring(P[state.active], 11*k, '#fff', 2);
+}
+
+function nearestStepId(map, mouseImg, thr){
+  const P=state.points, mp=map(mouseImg);
+  let best=null, bd=thr;
+  for(const s of state.preset.steps){
+    const p=P[s.id]; if(!p) continue;
+    const c=map(p), d=Math.hypot(c.x-mp.x, c.y-mp.y);
+    if(d<bd){ bd=d; best=s.id; }
+  }
+  return best;
 }
 
 function dashed(g,map,a,b,color,w,k=1){
