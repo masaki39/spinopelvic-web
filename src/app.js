@@ -159,12 +159,15 @@ async function saveMeasurementImage(){
 //==================================================================
 // ヒットテスト・ポインタ操作
 //==================================================================
+// preset.steps のうち kind:'circle' な点（大腿骨頭のような半径ハンドル付き円）のid一覧
+const circleStepIds = ()=> state.preset.steps.filter(s=>s.kind==='circle').map(s=>s.id);
+
 function hitTest(sp, thr=10){
   const P=state.points;
-  for(const [id,center] of [['femL',P.femL],['femR',P.femR]]){
-    if(!center) continue;
+  for(const id of circleStepIds()){
+    const center=P[id]; if(!center) continue;
     const h=toScreen({x:center.x+state.radius, y:center.y});
-    if(Math.hypot(sp.x-h.x,sp.y-h.y)<thr) return {type:id==='femL'?'radiusL':'radiusR'};
+    if(Math.hypot(sp.x-h.x,sp.y-h.y)<thr) return {type:'radius', id};
   }
   for(const s of state.preset.steps){ const p=P[s.id]; if(!p) continue;
     const c=toScreen(p); if(Math.hypot(sp.x-c.x,sp.y-c.y)<thr) return {type:'point', id:s.id}; }
@@ -177,8 +180,7 @@ function applyDrag(hit, ip){
   state.dirty=true;
   switch(hit.type){
     case 'point': P[hit.id]=ip; state.active=hit.id; break;
-    case 'radiusL': if(P.femL){ state.radius=Math.max(10,G.distance(ip,P.femL)); state.radiusManual=true; } break;
-    case 'radiusR': if(P.femR){ state.radius=Math.max(10,G.distance(ip,P.femR)); state.radiusManual=true; } break;
+    case 'radius': if(P[hit.id]){ state.radius=Math.max(10,G.distance(ip,P[hit.id])); state.radiusManual=true; } break;
     case 'scale1': sc.p1=ip; recalcScale(); break;
     case 'scale2': sc.p2=ip; recalcScale(); break;
   }
@@ -190,7 +192,7 @@ function dragSnapshot(hit){
   const P=state.points, sc=state.scale;
   switch(hit.type){
     case 'point': return {p:{...P[hit.id]}};
-    case 'radiusL': case 'radiusR': return {r:state.radius, manual:state.radiusManual};
+    case 'radius': return {r:state.radius, manual:state.radiusManual};
     case 'scale1': return {p:sc.p1&&{...sc.p1}, mm:sc.pxPerMm};
     case 'scale2': return {p:sc.p2&&{...sc.p2}, mm:sc.pxPerMm};
     default: return null;
@@ -201,7 +203,7 @@ function dragRollback(hit, snap){
   const P=state.points, sc=state.scale;
   switch(hit.type){
     case 'point': P[hit.id]=snap.p; break;
-    case 'radiusL': case 'radiusR': state.radius=snap.r; state.radiusManual=snap.manual; break;
+    case 'radius': state.radius=snap.r; state.radiusManual=snap.manual; break;
     case 'scale1': sc.p1=snap.p; sc.pxPerMm=snap.mm; break;
     case 'scale2': sc.p2=snap.p; sc.pxPerMm=snap.mm; break;
   }
@@ -436,21 +438,19 @@ function updateUI(){
     }).join('');
     const sv=$('svaInfo');
     if(res.svaPx!=null){
-      sv.innerHTML = res.svaMm!=null
-        ? `<b>SVA:</b> ${res.svaMm.toFixed(1)} mm <span style="color:#999">(${res.svaPx.toFixed(1)} px)</span>`
-        : `<b>SVA:</b> ${res.svaPx.toFixed(1)} px <span style="color:#999">（mm換算はスケール校正が必要）</span>`;
-    } else sv.innerHTML = `<span style="color:#999">SVA未計測（${TOUCH?'C7 / SVAボタンで配置':'C入力でC7配置'}）</span>`;
+      const val = res.svaMm!=null
+        ? `${res.svaMm.toFixed(1)}<span class="mu">mm</span>`
+        : `${res.svaPx.toFixed(1)}<span class="mu">px</span>`;
+      const sub = res.svaMm!=null ? `${res.svaPx.toFixed(1)} px` : 'mm換算はスケール校正が必要';
+      sv.innerHTML = `<div class="metric svawide"><div class="k">SVA</div><div class="v">${val}</div><div class="sub">${sub}</div></div>`;
+    } else {
+      const hint = hasExtra('c7') ? `（${TOUCH?'C7 / SVAボタンで配置':'C入力でC7配置'}）` : '';
+      sv.innerHTML = `<div class="note" style="color:#999">SVA未計測${hint}</div>`;
+    }
   } else {
     m.innerHTML = `<div class="note" style="grid-column:1/3">必須点を配置すると計測値が表示されます。</div>`;
     $('svaInfo').innerHTML='';
   }
-
-  // スケール表示
-  const sc=state.scale, sb=$('scaleInfo');
-  if(sc.pxPerMm){ sb.style.background='#fff3e0'; sb.style.border='1px solid #ffb74d';
-    sb.innerHTML=`📏 スケール: ${sc.realMm.toFixed(1)}mm / ${sc.pxPerMm.toFixed(2)} px/mm`; }
-  else { sb.style.background='#eee'; sb.style.border='1px solid #ccc';
-    sb.innerHTML='📏 スケール未校正（SVAはpx表示）'; }
 
   // 計測値メニューの追加操作ボタン: モード中は「中止」に切替
   for(const x of extrasOf()){
@@ -465,7 +465,7 @@ function updateUI(){
     // 完了/中止などの一時メッセージを保持
   }else if(!has){
     setStatus(TOUCH ? '画像を選択して計測を開始' : '画像を開いて計測を開始（O）');
-  }else if(sc.setting===0){
+  }else if(state.scale.setting===0){
     const pid=pendingStepId();
     if(pid){
       setStatus(TOUCH ? `次: ${labelOf(pid)} をタップ`

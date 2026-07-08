@@ -5,14 +5,15 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 const resolveSrc = p => fileURLToPath(new URL(p, import.meta.url));
 
 // ソースは src/ で分割管理し、配布用に各ページを単一HTMLへインライン化してビルドする
-// （マルチページ: src/index.html=ホーム, src/<app>/index.html=各計測アプリ）。
+// （マルチページ: src/index.html=ホーム, src/apps/<app>/index.html=各計測アプリ）。
 // vite-plugin-singlefile は単一エントリしか扱えない(inlineDynamicImportsの制約)ため、
 // PAGE 環境変数でページごとに個別ビルドする（build script 側でページ数分呼び出す）。
 // 出力(dist/*)は npm script でリポジトリ直下にコピーし、
 // GitHub Pages 配信物・ローカル配布物・ローカル版ダウンロードのすべてを兼ねる。
 const PAGES = {
   home:        'src/index.html',
-  spinopelvic: 'src/spinopelvic/index.html',
+  spinopelvic: 'src/apps/spinopelvic/index.html',
+  cervical:    'src/apps/cervical/index.html',
 };
 const entry = PAGES[process.env.PAGE] || PAGES.home;
 

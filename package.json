@@ -1,13 +1,13 @@
 {
-  "name": "spinopelvic-web",
+  "name": "spine-web",
   "version": "1.0.0",
-  "description": "Spinopelvic parameters (PI/PT/SS/LL/SVA) measurement local web app",
+  "description": "Spine X-ray measurement local web apps (Spinopelvic PI/PT/SS/LL/SVA, Cervical C2C7/T1S/SVA, ...)",
   "license": "Apache-2.0",
   "packageManager": "pnpm@11.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "rm -rf dist && PAGE=home vite build && PAGE=spinopelvic vite build && cp dist/index.html index.html && mkdir -p spinopelvic && cp dist/spinopelvic/index.html spinopelvic/index.html",
+    "build": "rm -rf dist && PAGE=home vite build && PAGE=spinopelvic vite build && PAGE=cervical vite build && cp dist/index.html index.html && mkdir -p apps/spinopelvic apps/cervical && cp dist/apps/spinopelvic/index.html apps/spinopelvic/index.html && cp dist/apps/cervical/index.html apps/cervical/index.html",
     "preview": "vite preview"
   },
   "devDependencies": {

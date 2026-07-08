@@ -1,10 +1,14 @@
-import { SPINOPELVIC } from './preset.js';
+import { PRESETS } from './preset.js';
+
+// どのプリセットを使うかは各アプリの <body data-preset="..."> で指定する
+// （main.js/app.js/render.js は全アプリで共通のまま、プリセットだけ差し替わる）。
+const presetId = document.body.dataset.preset || 'spinopelvic';
 
 //==================================================================
 // 状態
 //==================================================================
 export const state = {
-  preset: SPINOPELVIC,
+  preset: PRESETS[presetId],
   images: [],            // {file, name}
   index: -1,
   currentName: '',

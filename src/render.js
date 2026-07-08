@@ -96,6 +96,10 @@ function roundRect(g,x,y,w,h,r){
 
 // map: 画像座標→描画座標、ds: 画像長さの倍率、lw: 線幅、k: UI要素（点・文字）の倍率
 // opts.showLabels: 点の名称ラベル、opts.showActive: アクティブ点ハイライト（#11: 計測値付き保存では両方非表示）
+//
+// ランドマーク・終板ラインなどの描画は preset.steps / preset.lines / preset.plumbLines
+// という宣言的な定義から汎用的に行う（新しいプリセットは基本これらを定義するだけでよい）。
+// どのプリセットにも当てはまらない一点物の幾何（PIの補助線など）は preset.drawExtra に逃がす。
 function paintOverlay(g, map, ds, lw, k=1, opts={}){
   const {showLabels=true, showActive=true}=opts;
   const P=state.points, res=state.result, sc=state.scale;
@@ -110,8 +114,10 @@ function paintOverlay(g, map, ds, lw, k=1, opts={}){
     g.font=`${12*k}px system-ui`; g.textBaseline='bottom';
     const w=g.measureText(t).width; g.fillStyle='rgba(0,0,0,.65)'; g.fillRect(c.x+dx-2*k,c.y+dy-12*k,w+4*k,15*k);
     g.fillStyle=color; g.fillText(t,c.x+dx,c.y+dy); };
+  const dashedTo=(a,b,color,w)=>dashed(g,map,a,b,color,w,k);
+  const H={line,dot,ring,cross,label,dashed:dashedTo};
 
-  // スケール
+  // スケール（プリセットに依存しない共通オーバーレイ）
   if(sc.p1){ dot(sc.p1,5,'#ff9800'); ring(sc.p1,5*k,'#fff',1.5); }
   if(sc.p2){ dot(sc.p2,5,'#ff9800'); ring(sc.p2,5*k,'#fff',1.5); }
   if(sc.p1&&sc.p2){
@@ -121,63 +127,49 @@ function paintOverlay(g, map, ds, lw, k=1, opts={}){
     label(mid, sc.realMm? `${sc.realMm.toFixed(1)}mm (${px.toFixed(0)}px)`:`${px.toFixed(0)}px`, '#ffb74d', 0,-6);
   }
 
-  // 大腿骨頭
-  const femHead=(c)=>{
-    ring(c, state.radius*ds, '#4caf50', 2);
-    cross(c,'#ff5252');
-    const handle={x:c.x+state.radius, y:c.y};
-    dot(handle,6,'#fff'); ring(handle,6*k,'#4caf50',1.5);
-  };
-  if(P.femL) femHead(P.femL);
-  if(P.femR) femHead(P.femR);
-
-  // S1/L1
-  const sp=[['s1a','S1前','#ffeb3b'],['s1p','S1後','#ffeb3b'],['l1a','L1前','#ff9800'],['l1p','L1後','#ff9800']];
-  for(const [id,t,col] of sp){ if(P[id]){ dot(P[id],6,col); label(P[id],t,col); } }
-  if(P.s1a&&P.s1p){
-    line(P.s1a,P.s1p,'#00e5ff',2);
-    const s1Len=G.distance(P.s1a,P.s1p);
-    if(s1Len>0){
-      const ux=(P.s1p.x-P.s1a.x)/s1Len, uy=(P.s1p.y-P.s1a.y)/s1Len;
-      dashed(g,map,{x:P.s1a.x-ux*s1Len, y:P.s1a.y-uy*s1Len},P.s1a,'#00e5ff',1.5,k);
-      dashed(g,map,P.s1p,{x:P.s1p.x+ux*s1Len, y:P.s1p.y+uy*s1Len},'#00e5ff',1.5,k);
-    }
-  }
-  if(P.l1a&&P.l1p){
-    line(P.l1a,P.l1p,'#ff9800',2);
-    const l1Len=G.distance(P.l1a,P.l1p);
-    if(l1Len>0){
-      const ux=(P.l1p.x-P.l1a.x)/l1Len, uy=(P.l1p.y-P.l1a.y)/l1Len;
-      dashed(g,map,{x:P.l1a.x-ux*l1Len, y:P.l1a.y-uy*l1Len},P.l1a,'#ff9800',1.5,k);
-      dashed(g,map,P.l1p,{x:P.l1p.x+ux*l1Len, y:P.l1p.y+uy*l1Len},'#ff9800',1.5,k);
+  // ランドマーク点（preset.steps から汎用描画。kind:'circle' は大腿骨頭のような半径ハンドル付き円）
+  for(const s of state.preset.steps){
+    const p=P[s.id]; if(!p) continue;
+    if(s.kind==='circle'){
+      ring(p, state.radius*ds, '#4caf50', 2);
+      cross(p,'#ff5252');
+      const handle={x:p.x+state.radius, y:p.y};
+      dot(handle,6,'#fff'); ring(handle,6*k,'#4caf50',1.5);
+    }else{
+      dot(p,6,s.color); label(p,s.label,s.color);
     }
   }
 
-  // C7
-  if(P.c7a){ dot(P.c7a,6,'#b2ff59'); label(P.c7a,'C7前','#b2ff59'); }
-  if(P.c7p){ dot(P.c7p,6,'#b2ff59'); label(P.c7p,'C7後','#b2ff59'); }
-  if(P.c7a&&P.c7p) line(P.c7a,P.c7p,'#b2ff59',2);
+  // ランドマーク間の線（preset.lines。extend:true で両端に区間長ぶんの破線延長）
+  for(const ln of state.preset.lines||[]){
+    const a=P[ln.a], b=P[ln.b]; if(!a||!b) continue;
+    line(a,b,ln.color,ln.width||2);
+    if(ln.extend){
+      const len=G.distance(a,b);
+      if(len>0){
+        const ux=(b.x-a.x)/len, uy=(b.y-a.y)/len;
+        dashedTo({x:a.x-ux*len,y:a.y-uy*len}, a, ln.color, 1.5);
+        dashedTo(b, {x:b.x+ux*len,y:b.y+uy*len}, ln.color, 1.5);
+      }
+    }
+  }
 
-  // 計測補助線
+  // プリセット固有の補助描画（PIのS1法線・寛骨臼軸線など、点/線の宣言だけでは表せない幾何）
+  if(res) state.preset.drawExtra?.(H, P, res, ds, k);
+
+  // SVAのようなプラムライン（preset.plumbLines）: from の垂直位置を to の高さまで落とし、
+  // 水平距離を計測値として表示する（from/to は res の派生点でも P の配置点でもよい）
   if(res){
-    // s1Mid dot + S1 normal: s1a+s1p で解放。長さはS1-大腿骨頭軸の長さに連動させ、
-    // 画像サイズに関わらず見た目の比率が一定になるようにする
-    dot(res.s1Mid,5,'#fff');
-    const normalLen = res.hipAxis ? G.distance(res.s1Mid,res.hipAxis) : 180*k;
-    const end={x:res.s1Mid.x+res.s1Normal.x*normalLen, y:res.s1Mid.y+res.s1Normal.y*normalLen};
-    line(res.s1Mid,end,'#fff',2);
-
-    // hipAxis + PT line: femL+femR 追加後に解放
-    if(res.hipAxis){
-      dot(res.hipAxis,5,'#ab47bc');
-      line(res.hipAxis,res.s1Mid,'#ab47bc',2);
-    }
-
-    if(res.c7Mid&&P.s1p){
-      line(res.c7Mid,{x:res.c7Mid.x,y:P.s1p.y},'#b2ff59',2.5);
-      dashed(g,map,{x:P.s1p.x,y:P.s1p.y},{x:res.c7Mid.x,y:P.s1p.y},'#b2ff59',1.5,k);
-      const lab = res.svaMm!=null? `SVA ${res.svaMm.toFixed(1)}mm`:`SVA ${res.svaPx.toFixed(1)}px`;
-      label({x:(P.s1p.x+res.c7Mid.x)/2,y:P.s1p.y}, lab, '#b2ff59', 0, 16);
+    for(const pl of state.preset.plumbLines||[]){
+      const from=res[pl.from]||P[pl.from], to=res[pl.to]||P[pl.to];
+      if(!from||!to) continue;
+      const foot={x:from.x,y:to.y};
+      line(from,foot,pl.color,2.5);
+      dashedTo(to,foot,pl.color,1.5);
+      const mm=res[pl.mmKey], px=res[pl.pxKey];
+      const lab = mm!=null ? `${pl.prefix||'SVA'} ${mm.toFixed(1)}mm`
+                : px!=null ? `${pl.prefix||'SVA'} ${px.toFixed(1)}px` : null;
+      if(lab) label({x:(to.x+from.x)/2,y:to.y}, lab, pl.color, 0, 16);
     }
   }
 

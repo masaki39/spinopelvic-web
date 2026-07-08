@@ -1,22 +1,34 @@
 # Spine Analyzer Tools
 
 脊椎X線画像から計測値を算出するローカルWebアプリ集。`index.html` がホームページで、
-各計測アプリ（現在は **Spinopelvic Analyzer**: PI / PT / SS / LL / SVA）へのリンクを掲載します。
-**ダウンロードしてダブルクリックで起動**でき、画像は端末外に送信されず、
-すべてブラウザ内で処理されます（Research use only）。
+各計測アプリへのリンクを掲載します。**ダウンロードしてダブルクリックで起動**でき、
+画像は端末外に送信されず、すべてブラウザ内で処理されます（Research use only）。
 
 **🔗 オンライン版: https://masaki39.net/spinopelvic-web/**
 （ブラウザ上で開いても画像はアップロードされず、端末内でのみ処理されます）
 
-## 使い方（Spinopelvic Analyzer）
+## アプリ一覧
 
-1. `index.html`（ホーム）から「Spinopelvic Analyzer」を開くか、`spinopelvic/index.html` を直接ダブルクリックして開く（Google Chrome 推奨）。
+| アプリ | パス | 計測値 |
+|---|---|---|
+| **Spinopelvic Analyzer** | `apps/spinopelvic/` | PI / PT / SS / LL / SVA |
+| **Cervical Analyzer** | `apps/cervical/` | C2C7_angle / T1S / SVA |
+
+Cervical Analyzer のランドマーク定義は
+[masaki39/spine-measure-assist](https://github.com/masaki39/spine-measure-assist) の
+`CervicalMeasureAssist`（C2椎体中心・C2/C7下終板・C7上後隅角・T1上終板）に準拠しています
+（計算式自体はこのアプリの左右反転不変の流儀で実装）。
+
+## 使い方（共通の流れ）
+
+1. `index.html`（ホーム）から使いたいアプリを開くか、`apps/<アプリ名>/index.html` を
+   直接ダブルクリックして開く（Google Chrome 推奨）。
 2. **画像を開く (O)** で X 線画像を選択（複数選択・フォルダのドラッグ&ドロップ可）。
-3. 表示される指示に従い、クリックでランドマークを配置：
-   左大腿骨頭中心 → 右大腿骨頭中心 → S1前/後縁 → L1前/後縁。
-   配置後、**矢印キーで微調整**（⇧=5px, ⌥=0.2px）。
-4. 4点+大腿骨頭が揃うと右パネルに **PI / PT / SS / LL** が表示されます。
-5. **C** で C7 前/後縁を追加すると **SVA** を算出（mm 換算は **S** のスケール校正後）。
+3. 表示される指示に従い、クリックでランドマークを配置。配置後、**矢印キーで微調整**
+   （⇧=5px, ⌥=0.2px）。
+4. 必須点が揃うと右パネルに計測値が表示されます。
+5. 必要に応じて **S** でスケール校正（Spinopelvic Analyzer は **C** で C7 前/後縁を
+   追加して SVA を算出）。
 6. **Enter（=記録して次へ）** で結果を蓄積し、次の画像へ自動で進みます。
 7. **D** で蓄積した全結果を 1 つの CSV（UTF-8 BOM 付き）に保存。
 
@@ -28,10 +40,13 @@
 | `F` | 左右反転 | `S` | スケール校正 |
 | クリック | ランドマーク配置 | ドラッグ | 点の移動 / 余白でパン |
 | 矢印 | 選択点を微調整 (1px) | `⇧`/`⌥`+矢印 | 5px / 0.2px |
-| `Z` / `⌫` | 直前の点を取消 | `C` | C7 入力（SVA） |
+| `Z` / `⌫` | 直前の点を取消 | `C` | C7 入力（SVA、Spinopelvic Analyzer のみ） |
 | `Enter` / `E` | 記録して次の画像へ | `N` / `P` | 次 / 前の画像 |
 | `D` | 蓄積 CSV を保存 | `+` `-` `0` | ズーム / フィット |
 | ホイール | カーソル位置でズーム | `?` | ヘルプ表示 |
+
+`S` / `C` はそのアプリの計測値メニュー（サイドバー）に該当ボタンがある場合のみ有効です
+（`preset.extras` で宣言、上部の共通ツールバーには置きません）。
 
 ## エクスポート方式
 
@@ -43,14 +58,20 @@
 
 ## CSV 列
 
-`patient_id, image_name, saved_at, PI_deg, PT_deg, SS_deg, LL_deg, SVA_px, SVA_mm,
-scale_px_per_mm, scale_real_mm, scale_p1_x..p2_y, left/right_femoral_x/y,
-common_femoral_radius, S1/L1/C7 の anterior/posterior x/y`（旧 Flutter 版と互換、1 画像 = 1 行）。
+- **Spinopelvic Analyzer**: `patient_id, image_name, saved_at, PI_deg, PT_deg, SS_deg,
+  LL_deg, SVA_px, SVA_mm, scale_px_per_mm, scale_real_mm, scale_p1_x..p2_y,
+  left/right_femoral_x/y, common_femoral_radius, S1/L1/C7 の anterior/posterior x/y`
+  （旧 Flutter 版と互換、1 画像 = 1 行）。
+- **Cervical Analyzer**: `patient_id, image_name, saved_at, C2C7_angle_deg, T1S_deg,
+  SVA_px, SVA_mm, scale_px_per_mm, scale_real_mm, scale_p1_x..p2_y, C2_center_x/y,
+  C2/C7下終板/C7上後隅角/T1 の anterior/posterior x/y`。
 
 ## 計測定義
 
-計測値は**符号付き**です。前後ランドマーク（`s1a/s1p`, `l1a/l1p`）から「前方向」を
-導出して角度の正負を決めるため、画像を左右反転しても一貫した符号が得られます。
+計測値は**符号付き**です。前後ランドマークから「前方向」を導出して角度の正負を決めるため、
+画像を左右反転しても一貫した符号が得られます。
+
+**Spinopelvic Analyzer**（前後ランドマーク: `s1a/s1p`, `l1a/l1p`）
 
 - **PI**: S1 終板の垂線と寛骨臼軸線（S1中点→寛骨臼軸中点）の角度（`PI = PT + SS`）
 - **PT**: 寛骨臼軸線と鉛直線の角度（寛骨臼軸が前方＝正）
@@ -58,8 +79,14 @@ common_femoral_radius, S1/L1/C7 の anterior/posterior x/y`（旧 Flutter 版と
 - **LL**: L1 終板と S1 終板の Cobb 角（**前弯＝正 / 後弯＝負**）
 - **SVA**: C7 中点と S1 後縁の水平距離（C7 が前方＝正。px、スケール校正で mm）
 
-ブラウザのコンソールで `runSelfTest()` を実行すると、既知ケース・左右反転不変性・
-恒等式 `PI = PT + SS` で式の妥当性を検証できます。
+**Cervical Analyzer**（前後ランドマーク: `C2下終板`）
+
+- **C2C7_angle**: C2 下終板と C7 下終板の Cobb 角（**前弯＝正 / 後弯＝負**）
+- **T1S**: T1 上終板と水平線の角度
+- **SVA**: C2 椎体中心と C7 上後隅角の水平距離（C2 が前方＝正。px、スケール校正で mm）
+
+ブラウザのコンソールで `runSelfTest()` を実行すると（Spinopelvic Analyzer 上で）、既知ケース・
+左右反転不変性・恒等式 `PI = PT + SS` で式の妥当性を検証できます。
 
 ## 動作環境
 
@@ -75,44 +102,51 @@ common_femoral_radius, S1/L1/C7 の anterior/posterior x/y`（旧 Flutter 版と
 ソースは [Vite](https://vite.dev/) で `src/` 配下に**マルチページ**として分割管理し、
 ページごとに配布用の単一HTMLへインライン化してビルドします
 （[vite-plugin-singlefile](https://github.com/richardtallent/vite-plugin-singlefile)）。
-`src/index.html` がホーム、`src/<アプリ名>/index.html` が各計測アプリのエントリです。
+`src/index.html` がホーム、`src/apps/<アプリ名>/index.html` が各計測アプリのエントリです
+（アプリはリポジトリ直下が増え続けないよう `apps/` 配下にまとめています）。
 
 ```bash
-pnpm install      # 依存をインストール
-pnpm dev      # 開発サーバ（HMR）。 / がホーム、/spinopelvic/ がアプリ
+pnpm install  # 依存をインストール
+pnpm dev      # 開発サーバ（HMR）。 / がホーム、/apps/spinopelvic/ 等がアプリ
 pnpm build    # 各ページをビルドし、単一ファイルをリポジトリ直下にコピー
-              # (index.html=ホーム, spinopelvic/index.html=Spinopelvic Analyzer)
+              # (index.html=ホーム, apps/<アプリ名>/index.html=各アプリ)
 ```
 
 | ファイル | 役割 |
 |---|---|
 | `src/index.html` | ホームページ（アプリ一覧・案内） |
 | `src/home.js` / `src/home.css` | ホームページのエントリ / 専用スタイル |
-| `src/spinopelvic/index.html` | Spinopelvic Analyzer の画面マークアップ |
+| `src/apps/spinopelvic/index.html` | Spinopelvic Analyzer の画面マークアップ |
+| `src/apps/cervical/index.html` | Cervical Analyzer の画面マークアップ |
 | `src/style.css` | 計測アプリ共通のスタイル |
 | `src/geometry.js` | 幾何ユーティリティ（純粋関数） |
-| `src/preset.js` | 計測定義（ランドマーク・計測式・CSV スキーマ・計測値メニューの追加操作） |
-| `src/state.js` | アプリ状態と DOM 参照 |
-| `src/render.js` | キャンバス描画・ビュー変換 |
-| `src/app.js` | 画像入出力・計測・UI・イベント配線 |
-| `src/main.js` | 計測アプリのエントリ（CSS と app を読み込む） |
+| `src/preset.js` | 計測定義一式（`PRESETS` レジストリ。ランドマーク・描画・計測式・CSV・計測値メニュー） |
+| `src/state.js` | アプリ状態。`<body data-preset="...">` を見て `PRESETS` から使用プリセットを選ぶ |
+| `src/render.js` | キャンバス描画・ビュー変換（`preset.steps/lines/plumbLines/drawExtra` を汎用解釈） |
+| `src/app.js` | 画像入出力・計測・UI・イベント配線（全アプリ共通、プリセット固有の分岐なし） |
+| `src/main.js` | 計測アプリのエントリ（CSS と app を読み込む。全アプリ共通） |
 
-ビルド成果物のルート `index.html`（ホーム）・`spinopelvic/index.html`（アプリ）が、
+ビルド成果物のルート `index.html`（ホーム）・`apps/<アプリ名>/index.html`（各アプリ）が、
 GitHub Pages 配信物・ローカル配布物・「ローカル版ダウンロード」の実体を兼ねます。
-`pnpm build` 後、両方のファイルをコミットしてください。
+`pnpm build` 後、変更されたファイルをすべてコミットしてください。
 
 ### 新しい計測アプリを追加するには
 
-1. `src/<アプリ名>/index.html` を作成（`src/spinopelvic/index.html` を雛形に、`#extras` の
-   コンテナと `<script type="module" src="/main.js">` を含める）。
-2. `src/preset.js` に新しいプリセット（ランドマーク・計測式・CSV列・`extras`）を追加。
+`main.js` / `app.js` / `render.js` はプリセットに依存しない共通コードなので、
+基本的に**新しいプリセットを1つ定義するだけ**で新アプリを追加できます。
+
+1. `src/preset.js` に新しいプリセットを追加し、`PRESETS` レジストリに登録する。
+   - `steps`: ランドマーク定義（id・label・color。半径ハンドル付き円にしたい点は `kind:'circle'`）
+   - `lines`: 2点を結ぶ終板ラインなど（`extend:true` で破線延長）
+   - `plumbLines`: SVA のような垂直落下線+水平距離ラベル
+   - `compute` / `metrics` / `csvColumns` / `csvRow` / `extras`（計測値メニューの追加操作）
+   - 点/線の宣言だけで表せない幾何（PIの補助線など）だけ `drawExtra(H, P, res, ds, k)` に書く
+2. `src/apps/<アプリ名>/index.html` を作成（既存アプリの index.html を雛形に、
+   `<body data-preset="...">` を新しいプリセットidに、`#extras` コンテナ・`定義` セクションの
+   テキスト・タイトルを差し替える。`<script src="/main.js">` は変更不要）。
 3. `vite.config.js` の `PAGES` にエントリを追加し、`package.json` の `build` スクリプトへ
    ビルド呼び出しとコピーを追加。
 4. `src/index.html`（ホーム）の `.apps` にリンクカードを追加。
-
-なお `src/render.js` の描画ロジック（大腿骨頭・S1/L1など）は現状 Spinopelvic 固有の
-幾何計算です。2つ目のプリセットを追加する際は、必要な範囲でプリセット側に描画定義を
-持たせる形へ拡張してください。
 
 ## ライセンス / 謝辞
 

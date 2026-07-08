@@ -86,10 +86,12 @@ body.dragging #hud { opacity:0; }
 .metric { background:#fff; border-radius:10px; padding:10px; text-align:center; box-shadow:0 1px 3px #0002; }
 .metric .k { font-weight:700; font-size:11px; color:#777; }
 .metric .v { font-size:21px; font-weight:700; color:#1c1e21; }
+.metric .mu { font-size:13px; font-weight:600; color:#777; margin-left:3px; }
+.metric .sub { font-size:10.5px; font-weight:400; color:#888; margin-top:4px; }
 .note { font-size:11px; color:#666; line-height:1.6; }
-#svaInfo { margin-top:8px; font-size:12px; }
+#svaInfo { margin-top:8px; }
+#svaInfo .metric.svawide { width:100%; }
 .note.privacy { margin-top:10px; color:#999; }
-.scalebox { margin-top:10px; padding:8px 10px; border-radius:8px; font-size:12px; }
 
 /* 計測値メニュー: プリセット固有の追加操作（preset.extras から動的生成） */
 .extras { display:flex; gap:8px; margin-top:10px; }
